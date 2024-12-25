@@ -4,6 +4,8 @@
 import argparse
 import sys
 
+from benchmark.runner import BenchmarkRunner
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -12,7 +14,7 @@ def main():
     parser.add_argument(
         "--config",
         type=str,
-        help="Path to experiment configuration file",
+        help="Path to experiment configuration file (YAML or JSON)",
     )
     parser.add_argument(
         "--list-models",
@@ -36,7 +38,9 @@ def main():
         return 0
 
     if args.config:
-        print(f"Running experiment with config: {args.config}")
+        runner = BenchmarkRunner(args.config)
+        results = runner.run()
+        print(f"Experiment '{results['experiment_name']}' completed.")
         return 0
 
     parser.print_help()
