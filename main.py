@@ -30,7 +30,14 @@ def main():
     args = parser.parse_args()
 
     if args.list_models:
-        print("Available models will be listed here.")
+        from benchmark.registry import REGISTRY
+        models = REGISTRY.list_models()
+        if not models:
+            print("No models registered yet.")
+            return 0
+        print("Available models:")
+        for name, meta in sorted(models.items()):
+            print(f"  - {name} ({meta['type']})")
         return 0
 
     if args.history:
