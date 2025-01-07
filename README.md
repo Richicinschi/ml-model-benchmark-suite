@@ -36,6 +36,10 @@ View experiment history:
 python main.py --history
 ```
 
+## Configuration
+
+Experiments are driven by YAML or JSON config files. See `config/example.yaml` for a complete example.
+
 ## Author
 
 DigitalNomad
