@@ -67,6 +67,43 @@ class SklearnDatasetLoader(DatasetLoader):
         return X, y
 
 
+class OpenMLDatasetLoader(DatasetLoader):
+    """Load datasets from OpenML by dataset ID or name."""
+
+    def __init__(
+        self,
+        name_or_id: str,
+        version: int = 1,
+        as_frame: bool = True,
+        parser: str = "auto",
+        cache_dir: Optional[str] = None,
+    ):
+        self.name_or_id = name_or_id
+        self.version = version
+        self.as_frame = as_frame
+        self.parser = parser
+        self.cache_dir = cache_dir
+        self.logger = setup_logger("OpenMLDatasetLoader")
+
+    def load(self, **kwargs: Any) -> Tuple[pd.DataFrame, pd.Series]:
+        data = fetch_openml(
+            data_id=int(self.name_or_id) if self.name_or_id.isdigit() else None,
+            name=None if self.name_or_id.isdigit() else self.name_or_id,
+            version=self.version,
+            as_frame=self.as_frame,
+            parser=self.parser,
+            cache=self.cache_dir is not None,
+            data_home=self.cache_dir,
+            **kwargs,
+        )
+        X = data.data
+        y = data.target
+        self.logger.info(
+            f"Loaded OpenML dataset: {self.name_or_id} (v{self.version}) with shape {X.shape}"
+        )
+        return X, y
+
+
 def load_dataset(config: Dict[str, Any]) -> Tuple[pd.DataFrame, pd.Series]:
     """Factory function to load a dataset based on config dictionary."""
     source = config.get("source", "csv")
@@ -81,6 +118,14 @@ def load_dataset(config: Dict[str, Any]) -> Tuple[pd.DataFrame, pd.Series]:
         loader = SklearnDatasetLoader(
             name=config["name"],
             as_frame=config.get("as_frame", True),
+        )
+    elif source == "openml":
+        loader = OpenMLDatasetLoader(
+            name_or_id=config["name_or_id"],
+            version=config.get("version", 1),
+            as_frame=config.get("as_frame", True),
+            parser=config.get("parser", "auto"),
+            cache_dir=config.get("cache_dir"),
         )
     else:
         raise ValueError(f"Unsupported dataset source: {source}")
