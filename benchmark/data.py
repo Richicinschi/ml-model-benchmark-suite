@@ -86,16 +86,20 @@ class OpenMLDatasetLoader(DatasetLoader):
         self.logger = setup_logger("OpenMLDatasetLoader")
 
     def load(self, **kwargs: Any) -> Tuple[pd.DataFrame, pd.Series]:
-        data = fetch_openml(
-            data_id=int(self.name_or_id) if self.name_or_id.isdigit() else None,
-            name=None if self.name_or_id.isdigit() else self.name_or_id,
-            version=self.version,
-            as_frame=self.as_frame,
-            parser=self.parser,
-            cache=self.cache_dir is not None,
-            data_home=self.cache_dir,
-            **kwargs,
-        )
+        is_id = self.name_or_id.isdigit()
+        fetch_kwargs = {
+            "as_frame": self.as_frame,
+            "parser": self.parser,
+            "cache": self.cache_dir is not None,
+            "data_home": self.cache_dir,
+        }
+        fetch_kwargs.update(kwargs)
+        if is_id:
+            fetch_kwargs["data_id"] = int(self.name_or_id)
+        else:
+            fetch_kwargs["name"] = self.name_or_id
+            fetch_kwargs["version"] = self.version
+        data = fetch_openml(**fetch_kwargs)
         X = data.data
         y = data.target
         self.logger.info(
