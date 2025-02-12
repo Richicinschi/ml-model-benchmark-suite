@@ -7,6 +7,8 @@ import pandas as pd
 from .base import Experiment
 from .config import ExperimentConfig
 from .data import load_dataset
+# Import models to ensure they register themselves in the global registry
+from . import models  # noqa: F401
 from .preprocessing import PreprocessingPipeline
 from .registry import REGISTRY
 from .utils import setup_logger

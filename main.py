@@ -4,6 +4,9 @@
 import argparse
 import sys
 
+# Import models to ensure they register themselves
+import benchmark.models  # noqa: F401
+
 from benchmark.runner import BenchmarkRunner
 
 
