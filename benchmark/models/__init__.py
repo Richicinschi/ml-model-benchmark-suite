@@ -3,9 +3,13 @@
 from .classification import (
     LogisticRegression,
     KNeighborsClassifier,
+    RandomForestClassifier,
+    SVM,
 )
 
 __all__ = [
     "LogisticRegression",
     "KNeighborsClassifier",
+    "RandomForestClassifier",
+    "SVM",
 ]

@@ -3,8 +3,10 @@
 from typing import Optional, Any
 
 import pandas as pd
+from sklearn.ensemble import RandomForestClassifier as _RandomForestClassifier
 from sklearn.linear_model import LogisticRegression as _LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier as _KNeighborsClassifier
+from sklearn.svm import SVC as _SVC
 
 from ..base import ModelWrapper
 from ..registry import register_model
@@ -33,6 +35,40 @@ class KNeighborsClassifier(ModelWrapper):
 
     def __init__(self, **kwargs: Any):
         super().__init__("knn", _KNeighborsClassifier(**kwargs), hyperparams=kwargs)
+
+    def train(self, X: pd.DataFrame, y: pd.Series) -> None:
+        self.model.fit(X, y)
+
+    def predict(self, X: pd.DataFrame) -> Any:
+        return self.model.predict(X)
+
+    def predict_proba(self, X: pd.DataFrame) -> Optional[Any]:
+        return self.model.predict_proba(X)
+
+
+@register_model("random_forest", "classification", default_params={"n_estimators": 100})
+class RandomForestClassifier(ModelWrapper):
+    """Random forest classifier wrapper."""
+
+    def __init__(self, **kwargs: Any):
+        super().__init__("random_forest", _RandomForestClassifier(**kwargs), hyperparams=kwargs)
+
+    def train(self, X: pd.DataFrame, y: pd.Series) -> None:
+        self.model.fit(X, y)
+
+    def predict(self, X: pd.DataFrame) -> Any:
+        return self.model.predict(X)
+
+    def predict_proba(self, X: pd.DataFrame) -> Optional[Any]:
+        return self.model.predict_proba(X)
+
+
+@register_model("svm", "classification", default_params={"probability": True, "kernel": "rbf"})
+class SVM(ModelWrapper):
+    """Support vector machine classifier wrapper with probability enabled."""
+
+    def __init__(self, **kwargs: Any):
+        super().__init__("svm", _SVC(**kwargs), hyperparams=kwargs)
 
     def train(self, X: pd.DataFrame, y: pd.Series) -> None:
         self.model.fit(X, y)
