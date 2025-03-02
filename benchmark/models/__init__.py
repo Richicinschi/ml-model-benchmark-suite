@@ -12,11 +12,20 @@ try:
 except ImportError:
     XGBoostClassifier = None  # type: ignore
 
+from .regression import (
+    LinearRegression,
+    Ridge,
+    Lasso,
+)
+
 __all__ = [
     "LogisticRegression",
     "KNeighborsClassifier",
     "RandomForestClassifier",
     "SVM",
+    "LinearRegression",
+    "Ridge",
+    "Lasso",
 ]
 
 if XGBoostClassifier is not None:
