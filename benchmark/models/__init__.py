@@ -16,6 +16,8 @@ from .regression import (
     LinearRegression,
     Ridge,
     Lasso,
+    ElasticNet,
+    GradientBoostingRegressor,
 )
 
 __all__ = [
@@ -26,6 +28,8 @@ __all__ = [
     "LinearRegression",
     "Ridge",
     "Lasso",
+    "ElasticNet",
+    "GradientBoostingRegressor",
 ]
 
 if XGBoostClassifier is not None:

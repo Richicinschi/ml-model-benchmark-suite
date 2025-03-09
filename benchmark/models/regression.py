@@ -3,9 +3,11 @@
 from typing import Optional, Any
 
 import pandas as pd
+from sklearn.ensemble import GradientBoostingRegressor as _GradientBoostingRegressor
+from sklearn.linear_model import ElasticNet as _ElasticNet
+from sklearn.linear_model import Lasso as _Lasso
 from sklearn.linear_model import LinearRegression as _LinearRegression
 from sklearn.linear_model import Ridge as _Ridge
-from sklearn.linear_model import Lasso as _Lasso
 
 from ..base import ModelWrapper
 from ..registry import register_model
@@ -51,6 +53,40 @@ class Lasso(ModelWrapper):
 
     def __init__(self, **kwargs: Any):
         super().__init__("lasso", _Lasso(**kwargs), hyperparams=kwargs)
+
+    def train(self, X: pd.DataFrame, y: pd.Series) -> None:
+        self.model.fit(X, y)
+
+    def predict(self, X: pd.DataFrame) -> Any:
+        return self.model.predict(X)
+
+    def predict_proba(self, X: pd.DataFrame) -> Optional[Any]:
+        return None
+
+
+@register_model("elasticnet", "regression", default_params={"alpha": 1.0, "l1_ratio": 0.5, "max_iter": 1000})
+class ElasticNet(ModelWrapper):
+    """ElasticNet regression wrapper."""
+
+    def __init__(self, **kwargs: Any):
+        super().__init__("elasticnet", _ElasticNet(**kwargs), hyperparams=kwargs)
+
+    def train(self, X: pd.DataFrame, y: pd.Series) -> None:
+        self.model.fit(X, y)
+
+    def predict(self, X: pd.DataFrame) -> Any:
+        return self.model.predict(X)
+
+    def predict_proba(self, X: pd.DataFrame) -> Optional[Any]:
+        return None
+
+
+@register_model("gradient_boosting", "regression", default_params={"n_estimators": 100})
+class GradientBoostingRegressor(ModelWrapper):
+    """Gradient boosting regressor wrapper."""
+
+    def __init__(self, **kwargs: Any):
+        super().__init__("gradient_boosting", _GradientBoostingRegressor(**kwargs), hyperparams=kwargs)
 
     def train(self, X: pd.DataFrame, y: pd.Series) -> None:
         self.model.fit(X, y)
