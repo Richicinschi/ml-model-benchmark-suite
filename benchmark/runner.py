@@ -6,6 +6,7 @@ import pandas as pd
 
 from .base import Experiment
 from .config import ExperimentConfig
+from .cv import build_cv_strategy, get_cv_splits
 from .data import load_dataset
 # Import models to ensure they register themselves in the global registry
 from . import models  # noqa: F401
@@ -61,6 +62,51 @@ class BenchmarkRunner:
             self.logger.info(f"Instantiated model: {name}")
         return instances
 
+    def _run_cv(
+        self,
+        model_name: str,
+        model_wrapper: Any,
+        X: pd.DataFrame,
+        y: pd.Series,
+    ) -> Dict[str, Any]:
+        """Run cross-validation for a single model and return fold results."""
+        cv = build_cv_strategy(self.config.cv, X, y)
+        splits = get_cv_splits(cv, X, y)
+
+        fold_results = []
+        for fold_idx, (train_idx, val_idx) in enumerate(splits, 1):
+            X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
+            y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
+
+            # Clone a fresh model instance per fold
+            fold_model = REGISTRY.build(model_name)
+            fold_model.train(X_train, y_train)
+
+            train_preds = fold_model.predict(X_train)
+            val_preds = fold_model.predict(X_val)
+
+            fold_result = {
+                "fold": fold_idx,
+                "train_size": len(train_idx),
+                "val_size": len(val_idx),
+                "train_predictions": train_preds.tolist() if hasattr(train_preds, "tolist") else list(train_preds),
+                "val_predictions": val_preds.tolist() if hasattr(val_preds, "tolist") else list(val_preds),
+                "val_true": y_val.tolist() if hasattr(y_val, "tolist") else list(y_val),
+            }
+
+            # Probabilities if available
+            try:
+                val_proba = fold_model.predict_proba(X_val)
+                if val_proba is not None:
+                    fold_result["val_proba"] = val_proba.tolist() if hasattr(val_proba, "tolist") else val_proba
+            except Exception:
+                pass
+
+            fold_results.append(fold_result)
+            self.logger.info(f"{model_name} - fold {fold_idx}/{len(splits)} complete")
+
+        return {"model": model_name, "folds": fold_results, "n_folds": len(splits)}
+
     def run(self) -> Dict[str, Any]:
         """Execute the experiment defined in the configuration."""
         self.logger.info(f"Starting experiment: {self.config.experiment_name}")
@@ -71,6 +117,10 @@ class BenchmarkRunner:
         X_processed, y_processed = self.preprocess_data()
         model_instances = self.resolve_models()
 
+        model_results = {}
+        for name in self.config.models.keys():
+            model_results[name] = self._run_cv(name, model_instances[name], X_processed, y_processed)
+
         results = {
             "experiment_name": self.config.experiment_name,
             "dataset": self.config.dataset,
@@ -80,12 +130,13 @@ class BenchmarkRunner:
                 for name in self.config.models.keys()
             },
             "preprocessing": self.config.preprocessing,
+            "cv": self.config.cv,
             "data_shape": {
                 "raw": {"X": self.X.shape, "y": self.y.shape},
                 "processed": {"X": X_processed.shape, "y": y_processed.shape},
             },
             "status": "completed",
-            "results": {},
+            "results": model_results,
         }
 
         self.logger.info("Experiment completed successfully")
