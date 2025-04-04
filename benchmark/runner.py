@@ -10,6 +10,7 @@ from .cv import build_cv_strategy, get_cv_splits
 from .data import load_dataset
 # Import models to ensure they register themselves in the global registry
 from . import models  # noqa: F401
+from .metrics import compute_metrics
 from .preprocessing import PreprocessingPipeline
 from .registry import REGISTRY
 from .utils import setup_logger
@@ -72,6 +73,7 @@ class BenchmarkRunner:
         """Run cross-validation for a single model and return fold results."""
         cv = build_cv_strategy(self.config.cv, X, y)
         splits = get_cv_splits(cv, X, y)
+        task_type = REGISTRY.get(model_name)["type"]
 
         fold_results = []
         for fold_idx, (train_idx, val_idx) in enumerate(splits, 1):
@@ -89,23 +91,63 @@ class BenchmarkRunner:
                 "fold": fold_idx,
                 "train_size": len(train_idx),
                 "val_size": len(val_idx),
-                "train_predictions": train_preds.tolist() if hasattr(train_preds, "tolist") else list(train_preds),
-                "val_predictions": val_preds.tolist() if hasattr(val_preds, "tolist") else list(val_preds),
-                "val_true": y_val.tolist() if hasattr(y_val, "tolist") else list(y_val),
             }
 
-            # Probabilities if available
+            # Metrics
+            train_metrics = compute_metrics(
+                y_train, train_preds, task_type, y_proba=None
+            )
+            val_proba = None
             try:
                 val_proba = fold_model.predict_proba(X_val)
-                if val_proba is not None:
-                    fold_result["val_proba"] = val_proba.tolist() if hasattr(val_proba, "tolist") else val_proba
             except Exception:
                 pass
+            val_metrics = compute_metrics(y_val, val_preds, task_type, y_proba=val_proba)
+            fold_result["train_metrics"] = train_metrics
+            fold_result["val_metrics"] = val_metrics
 
             fold_results.append(fold_result)
             self.logger.info(f"{model_name} - fold {fold_idx}/{len(splits)} complete")
 
-        return {"model": model_name, "folds": fold_results, "n_folds": len(splits)}
+        # Aggregate metrics across folds
+        aggregated = self._aggregate_fold_metrics(fold_results)
+
+        return {
+            "model": model_name,
+            "task_type": task_type,
+            "folds": fold_results,
+            "n_folds": len(splits),
+            "aggregated": aggregated,
+        }
+
+    def _aggregate_fold_metrics(
+        self, fold_results: List[Dict[str, Any]]
+    ) -> Dict[str, Dict[str, float]]:
+        """Compute mean and std of scalar metrics across CV folds."""
+        if not fold_results:
+            return {}
+
+        def _is_scalar(value: Any) -> bool:
+            return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+        train_keys = list(fold_results[0]["train_metrics"].keys())
+        val_keys = list(fold_results[0]["val_metrics"].keys())
+
+        aggregated: Dict[str, Dict[str, float]] = {"train": {}, "val": {}}
+
+        for key in train_keys:
+            values = [f["train_metrics"][key] for f in fold_results if _is_scalar(f["train_metrics"][key])]
+            if values:
+                aggregated["train"][f"{key}_mean"] = float(pd.Series(values).mean())
+                aggregated["train"][f"{key}_std"] = float(pd.Series(values).std())
+
+        for key in val_keys:
+            values = [f["val_metrics"][key] for f in fold_results if _is_scalar(f["val_metrics"][key])]
+            if values:
+                aggregated["val"][f"{key}_mean"] = float(pd.Series(values).mean())
+                aggregated["val"][f"{key}_std"] = float(pd.Series(values).std())
+
+        return aggregated
 
     def run(self) -> Dict[str, Any]:
         """Execute the experiment defined in the configuration."""
