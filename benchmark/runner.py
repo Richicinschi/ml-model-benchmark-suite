@@ -10,6 +10,7 @@ from .cv import build_cv_strategy, get_cv_splits
 from .data import load_dataset
 # Import models to ensure they register themselves in the global registry
 from . import models  # noqa: F401
+from .importance import extract_feature_importance
 from .metrics import compute_metrics
 from .preprocessing import PreprocessingPipeline
 from .registry import REGISTRY
@@ -76,6 +77,7 @@ class BenchmarkRunner:
         task_type = REGISTRY.get(model_name)["type"]
 
         fold_results = []
+        final_model = None
         for fold_idx, (train_idx, val_idx) in enumerate(splits, 1):
             X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
             y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
@@ -83,6 +85,8 @@ class BenchmarkRunner:
             # Clone a fresh model instance per fold
             fold_model = REGISTRY.build(model_name)
             fold_model.train(X_train, y_train)
+            if fold_idx == len(splits):
+                final_model = fold_model
 
             train_preds = fold_model.predict(X_train)
             val_preds = fold_model.predict(X_val)
@@ -112,12 +116,20 @@ class BenchmarkRunner:
         # Aggregate metrics across folds
         aggregated = self._aggregate_fold_metrics(fold_results)
 
+        # Feature importance from final fold model
+        feature_importance = None
+        if final_model is not None:
+            feature_importance = extract_feature_importance(
+                model_name, final_model, feature_names=list(X.columns)
+            )
+
         return {
             "model": model_name,
             "task_type": task_type,
             "folds": fold_results,
             "n_folds": len(splits),
             "aggregated": aggregated,
+            "feature_importance": feature_importance,
         }
 
     def _aggregate_fold_metrics(
