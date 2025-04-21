@@ -12,6 +12,7 @@ from .data import load_dataset
 from . import models  # noqa: F401
 from .importance import extract_feature_importance
 from .metrics import compute_metrics
+from .shap_analysis import compute_shap_values
 from .preprocessing import PreprocessingPipeline
 from .registry import REGISTRY
 from .utils import setup_logger
@@ -123,6 +124,11 @@ class BenchmarkRunner:
                 model_name, final_model, feature_names=list(X.columns)
             )
 
+        # SHAP analysis from final fold model
+        shap_result = None
+        if final_model is not None:
+            shap_result = compute_shap_values(final_model, X)
+
         return {
             "model": model_name,
             "task_type": task_type,
@@ -130,6 +136,7 @@ class BenchmarkRunner:
             "n_folds": len(splits),
             "aggregated": aggregated,
             "feature_importance": feature_importance,
+            "shap": shap_result,
         }
 
     def _aggregate_fold_metrics(
