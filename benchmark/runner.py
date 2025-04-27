@@ -13,6 +13,7 @@ from . import models  # noqa: F401
 from .importance import extract_feature_importance
 from .metrics import compute_metrics
 from .shap_analysis import compute_shap_values
+from .tracking import ExperimentTracker
 from .preprocessing import PreprocessingPipeline
 from .registry import REGISTRY
 from .utils import setup_logger
@@ -199,6 +200,10 @@ class BenchmarkRunner:
             "status": "completed",
             "results": model_results,
         }
+
+        tracker = ExperimentTracker()
+        run_id = tracker.save_run(results)
+        results["run_id"] = run_id
 
         self.logger.info("Experiment completed successfully")
         return results
