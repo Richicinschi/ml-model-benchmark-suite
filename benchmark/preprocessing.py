@@ -43,11 +43,16 @@ class PreprocessingPipeline:
                 numeric_steps.append(("imputer", SimpleImputer(strategy=strategy)))
 
             scaler_name = self.config.get("scale", "standard")
+            if scaler_name is True:
+                scaler_name = "standard"
+            elif scaler_name is False:
+                scaler_name = "none"
+
             if scaler_name == "standard":
                 numeric_steps.append(("scaler", StandardScaler()))
             elif scaler_name == "minmax":
                 numeric_steps.append(("scaler", MinMaxScaler()))
-            elif scaler_name not in (False, None, "none"):
+            elif scaler_name not in (None, "none"):
                 raise ValueError(f"Unsupported scaler: {scaler_name}")
 
             if numeric_steps:
