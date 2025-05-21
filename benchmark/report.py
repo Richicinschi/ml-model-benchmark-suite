@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from .plots import plot_model_comparison, plot_train_val_curves
+from .plots import plot_confusion_matrix_heatmap, plot_model_comparison, plot_train_val_curves
 from .utils import setup_logger
 
 
@@ -81,6 +81,21 @@ class ReportGenerator:
                 )
                 if fig:
                     plots[f"train_val_{model_name}"] = self._fig_to_base64(fig)
+
+        # Confusion matrix heatmaps for classification models (last fold)
+        if task_type == "classification":
+            for model_name, model_res in model_results.items():
+                folds = model_res.get("folds", [])
+                if folds:
+                    last_fold = folds[-1]
+                    cm = last_fold.get("val_metrics", {}).get("confusion_matrix")
+                    if cm is not None:
+                        fig = plot_confusion_matrix_heatmap(
+                            cm,
+                            title=f"{model_name} - Confusion Matrix (last fold)",
+                        )
+                        if fig:
+                            plots[f"confusion_matrix_{model_name}"] = self._fig_to_base64(fig)
 
         return plots
 

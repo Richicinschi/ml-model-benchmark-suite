@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 
 
 def plot_model_comparison(
@@ -35,6 +36,41 @@ def plot_model_comparison(
             fontsize=9,
         )
     plt.xticks(rotation=45, ha="right")
+    plt.tight_layout()
+
+    if output_path:
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(output_path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        return None
+    return fig
+
+
+def plot_confusion_matrix_heatmap(
+    matrix: List[List[int]],
+    class_names: Optional[List[str]] = None,
+    output_path: Optional[str] = None,
+    title: Optional[str] = None,
+) -> Optional[plt.Figure]:
+    """Plot a confusion matrix as a seaborn heatmap."""
+    matrix = np.asarray(matrix)
+    if class_names is None:
+        class_names = [str(i) for i in range(matrix.shape[0])]
+
+    fig, ax = plt.subplots(figsize=(6, 5))
+    sns.heatmap(
+        matrix,
+        annot=True,
+        fmt="d",
+        cmap="Blues",
+        xticklabels=class_names,
+        yticklabels=class_names,
+        ax=ax,
+        cbar=False,
+    )
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("True")
+    ax.set_title(title or "Confusion Matrix")
     plt.tight_layout()
 
     if output_path:
