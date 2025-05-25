@@ -111,6 +111,9 @@ class BenchmarkRunner:
             val_metrics = compute_metrics(y_val, val_preds, task_type, y_proba=val_proba)
             fold_result["train_metrics"] = train_metrics
             fold_result["val_metrics"] = val_metrics
+            if val_proba is not None:
+                fold_result["val_proba"] = val_proba.tolist() if hasattr(val_proba, "tolist") else val_proba
+            fold_result["val_true"] = y_val.tolist() if hasattr(y_val, "tolist") else list(y_val)
 
             fold_results.append(fold_result)
             self.logger.info(f"{model_name} - fold {fold_idx}/{len(splits)} complete")

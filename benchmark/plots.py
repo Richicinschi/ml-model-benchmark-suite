@@ -6,6 +6,8 @@ from typing import Any, Dict, List, Optional
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+from sklearn.metrics import roc_curve, auc
+from sklearn.preprocessing import label_binarize
 
 
 def plot_model_comparison(
@@ -36,41 +38,6 @@ def plot_model_comparison(
             fontsize=9,
         )
     plt.xticks(rotation=45, ha="right")
-    plt.tight_layout()
-
-    if output_path:
-        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(output_path, dpi=150, bbox_inches="tight")
-        plt.close(fig)
-        return None
-    return fig
-
-
-def plot_confusion_matrix_heatmap(
-    matrix: List[List[int]],
-    class_names: Optional[List[str]] = None,
-    output_path: Optional[str] = None,
-    title: Optional[str] = None,
-) -> Optional[plt.Figure]:
-    """Plot a confusion matrix as a seaborn heatmap."""
-    matrix = np.asarray(matrix)
-    if class_names is None:
-        class_names = [str(i) for i in range(matrix.shape[0])]
-
-    fig, ax = plt.subplots(figsize=(6, 5))
-    sns.heatmap(
-        matrix,
-        annot=True,
-        fmt="d",
-        cmap="Blues",
-        xticklabels=class_names,
-        yticklabels=class_names,
-        ax=ax,
-        cbar=False,
-    )
-    ax.set_xlabel("Predicted")
-    ax.set_ylabel("True")
-    ax.set_title(title or "Confusion Matrix")
     plt.tight_layout()
 
     if output_path:
@@ -145,6 +112,90 @@ def plot_calibration_curve(
     ax.set_xlabel("Mean predicted probability")
     ax.set_ylabel("Fraction of positives")
     ax.set_title(title or "Calibration Curve")
+    ax.legend()
+    ax.grid(True, linestyle="--", alpha=0.6)
+    plt.tight_layout()
+
+    if output_path:
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(output_path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        return None
+    return fig
+
+
+def plot_confusion_matrix_heatmap(
+    matrix: List[List[int]],
+    class_names: Optional[List[str]] = None,
+    output_path: Optional[str] = None,
+    title: Optional[str] = None,
+) -> Optional[plt.Figure]:
+    """Plot a confusion matrix as a seaborn heatmap."""
+    matrix = np.asarray(matrix)
+    if class_names is None:
+        class_names = [str(i) for i in range(matrix.shape[0])]
+
+    fig, ax = plt.subplots(figsize=(6, 5))
+    sns.heatmap(
+        matrix,
+        annot=True,
+        fmt="d",
+        cmap="Blues",
+        xticklabels=class_names,
+        yticklabels=class_names,
+        ax=ax,
+        cbar=False,
+    )
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("True")
+    ax.set_title(title or "Confusion Matrix")
+    plt.tight_layout()
+
+    if output_path:
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(output_path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        return None
+    return fig
+
+
+def plot_roc_curve(
+    y_true: List[int],
+    y_proba: np.ndarray,
+    output_path: Optional[str] = None,
+    title: Optional[str] = None,
+) -> Optional[plt.Figure]:
+    """Plot ROC curve(s) for binary or multi-class classification."""
+    y_true = np.asarray(y_true)
+    y_proba = np.asarray(y_proba)
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+    ax.plot([0, 1], [0, 1], "k--", label="Random classifier")
+
+    classes = np.unique(y_true)
+    if len(classes) == 2 and y_proba.ndim > 1:
+        y_proba = y_proba[:, 1]
+
+    if y_proba.ndim == 1:
+        fpr, tpr, _ = roc_curve(y_true, y_proba)
+        roc_auc = auc(fpr, tpr)
+        ax.plot(fpr, tpr, label=f"ROC curve (AUC = {roc_auc:.3f})")
+    else:
+        y_true_bin = label_binarize(y_true, classes=classes)
+        if y_true_bin.shape[1] == 2:
+            y_true_bin = y_true_bin[:, 1]
+            fpr, tpr, _ = roc_curve(y_true, y_proba[:, 1])
+            roc_auc = auc(fpr, tpr)
+            ax.plot(fpr, tpr, label=f"ROC curve (AUC = {roc_auc:.3f})")
+        else:
+            for i, cls in enumerate(classes):
+                fpr, tpr, _ = roc_curve(y_true_bin[:, i], y_proba[:, i])
+                roc_auc = auc(fpr, tpr)
+                ax.plot(fpr, tpr, label=f"Class {cls} (AUC = {roc_auc:.3f})")
+
+    ax.set_xlabel("False Positive Rate")
+    ax.set_ylabel("True Positive Rate")
+    ax.set_title(title or "ROC Curve")
     ax.legend()
     ax.grid(True, linestyle="--", alpha=0.6)
     plt.tight_layout()

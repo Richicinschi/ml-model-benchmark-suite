@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from .plots import plot_confusion_matrix_heatmap, plot_model_comparison, plot_train_val_curves
+from .plots import plot_confusion_matrix_heatmap, plot_model_comparison, plot_roc_curve, plot_train_val_curves
 from .utils import setup_logger
 
 
@@ -82,7 +82,7 @@ class ReportGenerator:
                 if fig:
                     plots[f"train_val_{model_name}"] = self._fig_to_base64(fig)
 
-        # Confusion matrix heatmaps for classification models (last fold)
+        # Confusion matrix heatmaps and ROC curves for classification models (last fold)
         if task_type == "classification":
             for model_name, model_res in model_results.items():
                 folds = model_res.get("folds", [])
@@ -96,6 +96,18 @@ class ReportGenerator:
                         )
                         if fig:
                             plots[f"confusion_matrix_{model_name}"] = self._fig_to_base64(fig)
+
+                    val_proba = last_fold.get("val_proba")
+                    val_true = last_fold.get("val_true")
+                    if val_proba is not None and val_true is not None:
+                        import numpy as np
+                        fig = plot_roc_curve(
+                            val_true,
+                            np.asarray(val_proba),
+                            title=f"{model_name} - ROC Curve (last fold)",
+                        )
+                        if fig:
+                            plots[f"roc_curve_{model_name}"] = self._fig_to_base64(fig)
 
         return plots
 
