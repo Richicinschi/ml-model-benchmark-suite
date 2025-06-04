@@ -11,7 +11,13 @@ import matplotlib.pyplot as plt
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from .plots import plot_confusion_matrix_heatmap, plot_model_comparison, plot_roc_curve, plot_train_val_curves
+from .plots import (
+    plot_confusion_matrix_heatmap,
+    plot_model_comparison,
+    plot_precision_recall_curve,
+    plot_roc_curve,
+    plot_train_val_curves,
+)
 from .utils import setup_logger
 
 
@@ -108,6 +114,14 @@ class ReportGenerator:
                         )
                         if fig:
                             plots[f"roc_curve_{model_name}"] = self._fig_to_base64(fig)
+
+                        fig = plot_precision_recall_curve(
+                            val_true,
+                            np.asarray(val_proba),
+                            title=f"{model_name} - Precision-Recall Curve (last fold)",
+                        )
+                        if fig:
+                            plots[f"pr_curve_{model_name}"] = self._fig_to_base64(fig)
 
         return plots
 

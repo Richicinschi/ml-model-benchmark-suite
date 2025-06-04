@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_precision_score
 from sklearn.preprocessing import label_binarize
 
 
@@ -38,6 +38,53 @@ def plot_model_comparison(
             fontsize=9,
         )
     plt.xticks(rotation=45, ha="right")
+    plt.tight_layout()
+
+    if output_path:
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(output_path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        return None
+    return fig
+
+
+def plot_precision_recall_curve(
+    y_true: List[int],
+    y_proba: np.ndarray,
+    output_path: Optional[str] = None,
+    title: Optional[str] = None,
+) -> Optional[plt.Figure]:
+    """Plot precision-recall curve(s) for binary or multi-class classification."""
+    y_true = np.asarray(y_true)
+    y_proba = np.asarray(y_proba)
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+    classes = np.unique(y_true)
+
+    if len(classes) == 2 and y_proba.ndim > 1:
+        y_proba = y_proba[:, 1]
+
+    if y_proba.ndim == 1:
+        precision, recall, _ = precision_recall_curve(y_true, y_proba)
+        ap = average_precision_score(y_true, y_proba)
+        ax.plot(recall, precision, label=f"PR curve (AP = {ap:.3f})")
+    else:
+        y_true_bin = label_binarize(y_true, classes=classes)
+        if y_true_bin.shape[1] == 2:
+            precision, recall, _ = precision_recall_curve(y_true, y_proba[:, 1])
+            ap = average_precision_score(y_true, y_proba[:, 1])
+            ax.plot(recall, precision, label=f"PR curve (AP = {ap:.3f})")
+        else:
+            for i, cls in enumerate(classes):
+                precision, recall, _ = precision_recall_curve(y_true_bin[:, i], y_proba[:, i])
+                ap = average_precision_score(y_true_bin[:, i], y_proba[:, i])
+                ax.plot(recall, precision, label=f"Class {cls} (AP = {ap:.3f})")
+
+    ax.set_xlabel("Recall")
+    ax.set_ylabel("Precision")
+    ax.set_title(title or "Precision-Recall Curve")
+    ax.legend()
+    ax.grid(True, linestyle="--", alpha=0.6)
     plt.tight_layout()
 
     if output_path:
