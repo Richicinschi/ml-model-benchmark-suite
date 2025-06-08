@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from .plots import (
+    plot_calibration_curve,
     plot_confusion_matrix_heatmap,
     plot_model_comparison,
     plot_precision_recall_curve,
@@ -122,6 +123,17 @@ class ReportGenerator:
                         )
                         if fig:
                             plots[f"pr_curve_{model_name}"] = self._fig_to_base64(fig)
+
+                        # Calibration curve for binary classification
+                        unique_classes = len(np.unique(val_true))
+                        if unique_classes == 2:
+                            fig = plot_calibration_curve(
+                                val_true,
+                                np.asarray(val_proba),
+                                title=f"{model_name} - Calibration Curve (last fold)",
+                            )
+                            if fig:
+                                plots[f"calibration_{model_name}"] = self._fig_to_base64(fig)
 
         return plots
 
