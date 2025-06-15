@@ -10,6 +10,56 @@ from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_prec
 from sklearn.preprocessing import label_binarize
 
 
+def plot_multi_metric_comparison(
+    model_metrics: Dict[str, Dict[str, float]],
+    output_path: Optional[str] = None,
+    title: Optional[str] = None,
+) -> Optional[plt.Figure]:
+    """Grouped bar plot comparing multiple metrics across models."""
+    models = list(model_metrics.keys())
+    if not models:
+        return None
+
+    metric_names = list(next(iter(model_metrics.values())).keys())
+    x = np.arange(len(metric_names))
+    width = 0.8 / len(models)
+
+    fig, ax = plt.subplots(figsize=(max(7, len(metric_names) * 1.5), 5))
+    colors = plt.cm.viridis(np.linspace(0.2, 0.9, len(models)))
+
+    for i, (model, color) in enumerate(zip(models, colors)):
+        values = [model_metrics[model].get(m, 0.0) for m in metric_names]
+        offset = width * (i - len(models) / 2 + 0.5)
+        bars = ax.bar(x + offset, values, width, label=model, color=color)
+        for bar, val in zip(bars, values):
+            height = bar.get_height()
+            ax.annotate(
+                f"{val:.2f}",
+                xy=(bar.get_x() + bar.get_width() / 2, height),
+                xytext=(0, 2),
+                textcoords="offset points",
+                ha="center",
+                va="bottom",
+                fontsize=7,
+                rotation=90 if len(metric_names) > 4 else 0,
+            )
+
+    ax.set_ylabel("Score")
+    ax.set_title(title or "Multi-Metric Model Comparison")
+    ax.set_xticks(x)
+    ax.set_xticklabels(metric_names, rotation=30, ha="right")
+    ax.legend()
+    ax.grid(True, axis="y", linestyle="--", alpha=0.4)
+    plt.tight_layout()
+
+    if output_path:
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(output_path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        return None
+    return fig
+
+
 def plot_model_comparison(
     metric_values: Dict[str, float],
     metric_name: str,

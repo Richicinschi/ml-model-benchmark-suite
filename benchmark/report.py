@@ -15,6 +15,7 @@ from .plots import (
     plot_calibration_curve,
     plot_confusion_matrix_heatmap,
     plot_model_comparison,
+    plot_multi_metric_comparison,
     plot_precision_recall_curve,
     plot_roc_curve,
     plot_train_val_curves,
@@ -76,6 +77,28 @@ class ReportGenerator:
             )
             if fig:
                 plots["model_comparison"] = self._fig_to_base64(fig)
+
+        # Multi-metric side-by-side comparison
+        multi_metrics = {}
+        for model_name, model_res in model_results.items():
+            agg = model_res.get("aggregated", {})
+            val_metrics = agg.get("val", {})
+            model_scores = {}
+            for key in val_metrics:
+                if key.endswith("_mean"):
+                    short_key = key.replace("_mean", "")
+                    if short_key not in ("confusion_matrix",):
+                        model_scores[short_key] = val_metrics[key]
+            if model_scores:
+                multi_metrics[model_name] = model_scores
+
+        if len(multi_metrics) > 1:
+            fig = plot_multi_metric_comparison(
+                multi_metrics,
+                title="Multi-Metric Model Comparison",
+            )
+            if fig:
+                plots["multi_metric_comparison"] = self._fig_to_base64(fig)
 
         # Train vs validation curves for overfitting detection
         for model_name, model_res in model_results.items():
