@@ -12,6 +12,7 @@ from .data import load_dataset
 from . import models  # noqa: F401
 from .importance import extract_feature_importance
 from .metrics import compute_metrics
+from .overfitting import OverfittingDetector
 from .shap_analysis import compute_shap_values
 from .tracking import ExperimentTracker
 from .preprocessing import PreprocessingPipeline
@@ -133,6 +134,13 @@ class BenchmarkRunner:
         if final_model is not None:
             shap_result = compute_shap_values(final_model, X)
 
+        # Overfitting detection
+        detector = OverfittingDetector()
+        overfitting = detector.detect(fold_results)
+        if overfitting["warnings"]:
+            for warning in overfitting["warnings"]:
+                self.logger.warning(f"{model_name} - {warning}")
+
         return {
             "model": model_name,
             "task_type": task_type,
@@ -141,6 +149,7 @@ class BenchmarkRunner:
             "aggregated": aggregated,
             "feature_importance": feature_importance,
             "shap": shap_result,
+            "overfitting": overfitting,
         }
 
     def _aggregate_fold_metrics(

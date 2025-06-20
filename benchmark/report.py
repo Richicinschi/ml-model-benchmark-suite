@@ -178,6 +178,11 @@ class ReportGenerator:
             for name, res in model_results.items()
             if res.get("feature_importance") is not None
         }
+        overfitting = {
+            name: res.get("overfitting", {})
+            for name, res in model_results.items()
+            if res.get("overfitting", {}).get("warnings")
+        }
 
         plots = self._generate_plots(results)
 
@@ -189,6 +194,7 @@ class ReportGenerator:
             models=results.get("models", []),
             aggregated_metrics=aggregated_metrics,
             feature_importance=feature_importance,
+            overfitting=overfitting,
             plots=plots,
         )
 

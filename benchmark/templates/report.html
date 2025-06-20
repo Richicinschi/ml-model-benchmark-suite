@@ -51,6 +51,27 @@
     </div>
     {% endif %}
 
+    {% if overfitting %}
+    <div class="card">
+        <h2>Overfitting Detection</h2>
+        {% for model, of in overfitting.items() %}
+            <h3>{{ model }} — {{ of.status }}</h3>
+            <p>
+                <strong>Primary metric:</strong> {{ of.primary_metric }}<br>
+                <strong>Avg train:</strong> {{ "%.4f" | format(of.avg_train) }}<br>
+                <strong>Avg val:</strong> {{ "%.4f" | format(of.avg_val) }}<br>
+                <strong>Gap:</strong> {{ "%.4f" | format(of.gap) }}<br>
+                <strong>Relative gap:</strong> {{ "%.2f" | format(of.relative_gap * 100) }}%
+            </p>
+            <ul>
+                {% for warning in of.warnings %}
+                <li style="color: #c0392b;">{{ warning }}</li>
+                {% endfor %}
+            </ul>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     {% if feature_importance %}
     <div class="card">
         <h2>Feature Importance</h2>
