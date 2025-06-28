@@ -29,7 +29,10 @@ class BenchmarkRunner:
         self._validate_models()
         self.X: pd.DataFrame = pd.DataFrame()
         self.y: pd.Series = pd.Series(dtype="object")
+        self.X_processed: pd.DataFrame = pd.DataFrame()
+        self.y_processed: pd.Series = pd.Series(dtype="object")
         self.preprocessor: PreprocessingPipeline = PreprocessingPipeline()
+        self.model_instances: Dict[str, Any] = {}
 
     def _validate_models(self) -> None:
         """Ensure all requested models are registered."""
@@ -188,12 +191,12 @@ class BenchmarkRunner:
         self.logger.info(f"Models: {list(self.config.models.keys())}")
 
         self.load_data()
-        X_processed, y_processed = self.preprocess_data()
-        model_instances = self.resolve_models()
+        self.X_processed, self.y_processed = self.preprocess_data()
+        self.model_instances = self.resolve_models()
 
         model_results = {}
         for name in self.config.models.keys():
-            model_results[name] = self._run_cv(name, model_instances[name], X_processed, y_processed)
+            model_results[name] = self._run_cv(name, self.model_instances[name], self.X_processed, self.y_processed)
 
         results = {
             "experiment_name": self.config.experiment_name,
@@ -207,7 +210,7 @@ class BenchmarkRunner:
             "cv": self.config.cv,
             "data_shape": {
                 "raw": {"X": self.X.shape, "y": self.y.shape},
-                "processed": {"X": X_processed.shape, "y": y_processed.shape},
+                "processed": {"X": self.X_processed.shape, "y": self.y_processed.shape},
             },
             "status": "completed",
             "results": model_results,

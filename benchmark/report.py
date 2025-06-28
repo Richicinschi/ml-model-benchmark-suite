@@ -14,6 +14,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from .plots import (
     plot_calibration_curve,
     plot_confusion_matrix_heatmap,
+    plot_learning_curve,
     plot_model_comparison,
     plot_multi_metric_comparison,
     plot_precision_recall_curve,
@@ -49,6 +50,9 @@ class ReportGenerator:
     def _generate_plots(
         self,
         results: Dict[str, Any],
+        X=None,
+        y=None,
+        models=None,
     ) -> Dict[str, str]:
         """Generate comparison and overfitting plots from experiment results."""
         plots = {}
@@ -158,12 +162,37 @@ class ReportGenerator:
                             if fig:
                                 plots[f"calibration_{model_name}"] = self._fig_to_base64(fig)
 
+        # Learning curves
+        if X is not None and y is not None and models:
+            for model_name, model_res in model_results.items():
+                if model_name not in models:
+                    continue
+                estimator = models[model_name]
+                task_type = model_res.get("task_type", "classification")
+                scoring = "accuracy" if task_type == "classification" else "neg_mean_squared_error"
+                try:
+                    fig = plot_learning_curve(
+                        estimator,
+                        X,
+                        y,
+                        cv=3,
+                        scoring=scoring,
+                        title=f"{model_name} - Learning Curve",
+                    )
+                    if fig:
+                        plots[f"learning_curve_{model_name}"] = self._fig_to_base64(fig)
+                except Exception as exc:
+                    self.logger.warning(f"Learning curve failed for {model_name}: {exc}")
+
         return plots
 
     def generate(
         self,
         results: Dict[str, Any],
         output_path: str,
+        X=None,
+        y=None,
+        models=None,
     ) -> str:
         """Render an HTML report and save it to disk."""
         template = self.env.get_template("report.html")
@@ -184,7 +213,7 @@ class ReportGenerator:
             if res.get("overfitting", {}).get("warnings")
         }
 
-        plots = self._generate_plots(results)
+        plots = self._generate_plots(results, X=X, y=y, models=models)
 
         html = template.render(
             experiment_name=results.get("experiment_name", "Benchmark Report"),

@@ -90,7 +90,17 @@ def main():
             print(f"Run ID: {results['run_id']}")
         if args.report:
             gen = ReportGenerator()
-            gen.generate(results, args.report)
+            sklearn_models = {
+                name: wrapper.model
+                for name, wrapper in runner.model_instances.items()
+            }
+            gen.generate(
+                results,
+                args.report,
+                X=runner.X_processed,
+                y=runner.y_processed,
+                models=sklearn_models,
+            )
             print(f"Report saved to: {args.report}")
         return 0
 

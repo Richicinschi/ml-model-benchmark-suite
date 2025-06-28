@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_precision_score
+from sklearn.model_selection import learning_curve
 from sklearn.preprocessing import label_binarize
 
 
@@ -294,6 +295,51 @@ def plot_roc_curve(
     ax.set_ylabel("True Positive Rate")
     ax.set_title(title or "ROC Curve")
     ax.legend()
+    ax.grid(True, linestyle="--", alpha=0.6)
+    plt.tight_layout()
+
+    if output_path:
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(output_path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        return None
+    return fig
+
+
+
+def plot_learning_curve(
+    estimator,
+    X: np.ndarray,
+    y: np.ndarray,
+    cv=5,
+    train_sizes=np.linspace(0.1, 1.0, 5),
+    scoring: Optional[str] = None,
+    output_path: Optional[str] = None,
+    title: Optional[str] = None,
+) -> Optional[plt.Figure]:
+    """Plot learning curve showing training and cross-validation scores."""
+    train_sizes, train_scores, val_scores = learning_curve(
+        estimator, X, y, cv=cv, train_sizes=train_sizes, scoring=scoring, n_jobs=1
+    )
+    train_mean = np.mean(train_scores, axis=1)
+    train_std = np.std(train_scores, axis=1)
+    val_mean = np.mean(val_scores, axis=1)
+    val_std = np.std(val_scores, axis=1)
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+    ax.plot(train_sizes, train_mean, "o-", color="blue", label="Training score")
+    ax.fill_between(
+        train_sizes, train_mean - train_std, train_mean + train_std, alpha=0.1, color="blue"
+    )
+    ax.plot(train_sizes, val_mean, "o-", color="green", label="Cross-validation score")
+    ax.fill_between(
+        train_sizes, val_mean - val_std, val_mean + val_std, alpha=0.1, color="green"
+    )
+
+    ax.set_xlabel("Training examples")
+    ax.set_ylabel("Score" if scoring is None else f"Score ({scoring})")
+    ax.set_title(title or "Learning Curve")
+    ax.legend(loc="best")
     ax.grid(True, linestyle="--", alpha=0.6)
     plt.tight_layout()
 
