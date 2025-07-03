@@ -18,6 +18,7 @@ from .plots import (
     plot_model_comparison,
     plot_multi_metric_comparison,
     plot_precision_recall_curve,
+    plot_residuals,
     plot_roc_curve,
     plot_train_val_curves,
 )
@@ -161,6 +162,24 @@ class ReportGenerator:
                             )
                             if fig:
                                 plots[f"calibration_{model_name}"] = self._fig_to_base64(fig)
+
+        # Residual plots for regression models (last fold)
+        if task_type == "regression":
+            for model_name, model_res in model_results.items():
+                folds = model_res.get("folds", [])
+                if folds:
+                    last_fold = folds[-1]
+                    val_true = last_fold.get("val_true")
+                    val_preds = last_fold.get("val_preds")
+                    if val_true is not None and val_preds is not None:
+                        import numpy as np
+                        fig = plot_residuals(
+                            np.asarray(val_true),
+                            np.asarray(val_preds),
+                            title=f"{model_name} - Residuals (last fold)",
+                        )
+                        if fig:
+                            plots[f"residuals_{model_name}"] = self._fig_to_base64(fig)
 
         # Learning curves
         if X is not None and y is not None and models:

@@ -118,6 +118,7 @@ class BenchmarkRunner:
             if val_proba is not None:
                 fold_result["val_proba"] = val_proba.tolist() if hasattr(val_proba, "tolist") else val_proba
             fold_result["val_true"] = y_val.tolist() if hasattr(y_val, "tolist") else list(y_val)
+            fold_result["val_preds"] = val_preds.tolist() if hasattr(val_preds, "tolist") else list(val_preds)
 
             fold_results.append(fold_result)
             self.logger.info(f"{model_name} - fold {fold_idx}/{len(splits)} complete")

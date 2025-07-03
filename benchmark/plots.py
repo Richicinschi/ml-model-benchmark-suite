@@ -349,3 +349,45 @@ def plot_learning_curve(
         plt.close(fig)
         return None
     return fig
+
+
+
+def plot_residuals(
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    output_path: Optional[str] = None,
+    title: Optional[str] = None,
+) -> Optional[plt.Figure]:
+    """Plot regression residuals: residuals vs fitted and residual distribution."""
+    y_true = np.asarray(y_true).ravel()
+    y_pred = np.asarray(y_pred).ravel()
+    residuals = y_true - y_pred
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+    # Residuals vs fitted
+    ax = axes[0]
+    ax.scatter(y_pred, residuals, alpha=0.6, edgecolors="k")
+    ax.axhline(0, color="red", linestyle="--")
+    ax.set_xlabel("Predicted values")
+    ax.set_ylabel("Residuals")
+    ax.set_title("Residuals vs Fitted")
+    ax.grid(True, linestyle="--", alpha=0.6)
+
+    # Residual distribution
+    ax = axes[1]
+    sns.histplot(residuals, kde=True, ax=ax, color="steelblue")
+    ax.axvline(0, color="red", linestyle="--")
+    ax.set_xlabel("Residuals")
+    ax.set_title("Residual Distribution")
+    ax.grid(True, linestyle="--", alpha=0.6)
+
+    fig.suptitle(title or "Residual Analysis")
+    plt.tight_layout()
+
+    if output_path:
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(output_path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        return None
+    return fig
