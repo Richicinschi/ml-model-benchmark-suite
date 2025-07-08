@@ -4,91 +4,234 @@
     <meta charset="UTF-8">
     <title>{{ experiment_name }} - Benchmark Report</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; background: #f8f9fa; color: #333; }
-        h1, h2, h3 { color: #2c3e50; }
-        .card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background: #3498db; color: #fff; }
-        tr:nth-child(even) { background: #f2f2f2; }
-        .metric { display: inline-block; background: #e8f4fc; padding: 6px 12px; border-radius: 4px; margin: 4px; }
-        img { max-width: 100%; border-radius: 6px; margin-top: 10px; }
-        .footer { margin-top: 40px; font-size: 0.9em; color: #777; }
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --bg: #f4f6f8;
+            --card-bg: #ffffff;
+            --text: #333333;
+            --muted: #666666;
+            --border: #e1e4e8;
+            --warning: #c0392b;
+            --success: #27ae60;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 30px 20px; }
+        h1, h2, h3 { color: var(--primary); margin-top: 0; }
+        h1 { font-size: 2rem; margin-bottom: 0.2rem; }
+        h2 { font-size: 1.4rem; border-bottom: 2px solid var(--border); padding-bottom: 8px; margin-top: 30px; }
+        h3 { font-size: 1.1rem; margin-top: 20px; color: var(--accent); }
+        .subtitle { color: var(--muted); font-size: 0.95rem; margin-bottom: 20px; }
+        .card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+        }
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 20px; }
+        .grid-1 { display: grid; grid-template-columns: 1fr; gap: 20px; }
+        .plot-card { text-align: center; }
+        .plot-card img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--border); }
+        .plot-title { font-weight: 600; margin-bottom: 10px; color: var(--primary); }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; font-size: 0.95rem; }
+        th, td { border: 1px solid var(--border); padding: 10px; text-align: left; }
+        th { background: var(--accent); color: #fff; }
+        tr:nth-child(even) { background: #fafbfc; }
+        .metric {
+            display: inline-block;
+            background: #e8f4fc;
+            padding: 6px 12px;
+            border-radius: 20px;
+            margin: 4px 4px 4px 0;
+            font-size: 0.9rem;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .badge-warning { background: #fdeaea; color: var(--warning); }
+        .badge-success { background: #e9f7ef; color: var(--success); }
+        .warning-list { color: var(--warning); padding-left: 20px; }
+        .warning-list li { margin-bottom: 6px; }
+        .section-intro { color: var(--muted); margin-bottom: 16px; }
+        .footer { margin-top: 40px; font-size: 0.9em; color: var(--muted); text-align: center; }
+        @media (max-width: 600px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h1>{{ experiment_name }}</h1>
-        <p><strong>Generated:</strong> {{ timestamp }}</p>
-        <p><strong>Status:</strong> {{ status }}</p>
-        <p><strong>Dataset:</strong> {{ dataset | tojson }}</p>
-        <p><strong>Models:</strong> {{ models | join(", ") }}</p>
-    </div>
-
-    {% if aggregated_metrics %}
-    <div class="card">
-        <h2>Aggregated Metrics</h2>
-        {% for model, metrics in aggregated_metrics.items() %}
-            <h3>{{ model }}</h3>
-            {% if metrics.val %}
-                <p>Validation metrics:</p>
-                {% for key, value in metrics.val.items() %}
-                    <span class="metric"><strong>{{ key }}:</strong> {{ "%.4f" | format(value) }}</span>
-                {% endfor %}
-            {% endif %}
-            <br><br>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    {% if plots %}
-    <div class="card">
-        <h2>Visualizations</h2>
-        {% for name, src in plots.items() %}
-            <h3>{{ name }}</h3>
-            <img src="{{ src }}" alt="{{ name }}">
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    {% if overfitting %}
-    <div class="card">
-        <h2>Overfitting Detection</h2>
-        {% for model, of in overfitting.items() %}
-            <h3>{{ model }} — {{ of.status }}</h3>
-            <p>
-                <strong>Primary metric:</strong> {{ of.primary_metric }}<br>
-                <strong>Avg train:</strong> {{ "%.4f" | format(of.avg_train) }}<br>
-                <strong>Avg val:</strong> {{ "%.4f" | format(of.avg_val) }}<br>
-                <strong>Gap:</strong> {{ "%.4f" | format(of.gap) }}<br>
-                <strong>Relative gap:</strong> {{ "%.2f" | format(of.relative_gap * 100) }}%
+    <div class="container">
+        <div class="card">
+            <h1>{{ experiment_name }}</h1>
+            <p class="subtitle">
+                Generated: {{ timestamp }} &nbsp;|&nbsp;
+                Status: <span class="badge {% if status == 'completed' %}badge-success{% else %}badge-warning{% endif %}">{{ status }}</span>
             </p>
-            <ul>
-                {% for warning in of.warnings %}
-                <li style="color: #c0392b;">{{ warning }}</li>
-                {% endfor %}
-            </ul>
-        {% endfor %}
-    </div>
-    {% endif %}
+            <p><strong>Dataset:</strong> {{ dataset | tojson }}</p>
+            <p><strong>Models:</strong> {{ models | join(", ") }}</p>
+        </div>
 
-    {% if feature_importance %}
-    <div class="card">
-        <h2>Feature Importance</h2>
-        {% for model, fi in feature_importance.items() %}
-            <h3>{{ model }}</h3>
-            <table>
-                <tr><th>Feature</th><th>Importance</th></tr>
-                {% for feature, importance in fi.items() %}
-                <tr><td>{{ feature }}</td><td>{{ "%.4f" | format(importance) }}</td></tr>
-                {% endfor %}
-            </table>
-        {% endfor %}
-    </div>
-    {% endif %}
+        {% if aggregated_metrics %}
+        <div class="card">
+            <h2>Aggregated Metrics</h2>
+            <p class="section-intro">Mean and standard deviation of validation metrics across CV folds.</p>
+            {% for model, metrics in aggregated_metrics.items() %}
+                <h3>{{ model }}</h3>
+                {% if metrics.val %}
+                    <p>
+                    {% for key, value in metrics.val.items() %}
+                        <span class="metric"><strong>{{ key }}:</strong> {{ "%.4f" | format(value) }}</span>
+                    {% endfor %}
+                    </p>
+                {% else %}
+                    <p>No validation metrics available.</p>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
 
-    <div class="footer">
-        Generated by ml-model-benchmark-suite
+        {% if plots %}
+        {% set model_results = {} %}
+
+        <!-- Model comparisons -->
+        {% if plots.model_comparison or plots.multi_metric_comparison %}
+        <div class="card">
+            <h2>Model Comparisons</h2>
+            <p class="section-intro">Side-by-side performance comparisons across models.</p>
+            <div class="grid-2">
+                {% if plots.model_comparison %}
+                <div class="plot-card">
+                    <div class="plot-title">Primary Metric Comparison</div>
+                    <img src="{{ plots.model_comparison }}" alt="Model Comparison">
+                </div>
+                {% endif %}
+                {% if plots.multi_metric_comparison %}
+                <div class="plot-card">
+                    <div class="plot-title">Multi-Metric Comparison</div>
+                    <img src="{{ plots.multi_metric_comparison }}" alt="Multi-Metric Comparison">
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Per-model diagnostics -->
+        {% for model in models %}
+            {% set has_plots = plots["learning_curve_" ~ model] or plots["train_val_" ~ model] or plots["confusion_matrix_" ~ model] or plots["roc_curve_" ~ model] or plots["pr_curve_" ~ model] or plots["calibration_" ~ model] or plots["residuals_" ~ model] %}
+            {% if has_plots %}
+            <div class="card">
+                <h2>{{ model }} Diagnostics</h2>
+                <div class="grid-2">
+                    {% if plots["learning_curve_" ~ model] %}
+                    <div class="plot-card">
+                        <div class="plot-title">Learning Curve</div>
+                        <img src="{{ plots["learning_curve_" ~ model] }}" alt="Learning Curve {{ model }}">
+                    </div>
+                    {% endif %}
+                    {% if plots["train_val_" ~ model] %}
+                    <div class="plot-card">
+                        <div class="plot-title">Train vs Validation</div>
+                        <img src="{{ plots["train_val_" ~ model] }}" alt="Train vs Validation {{ model }}">
+                    </div>
+                    {% endif %}
+                    {% if plots["confusion_matrix_" ~ model] %}
+                    <div class="plot-card">
+                        <div class="plot-title">Confusion Matrix (last fold)</div>
+                        <img src="{{ plots["confusion_matrix_" ~ model] }}" alt="Confusion Matrix {{ model }}">
+                    </div>
+                    {% endif %}
+                    {% if plots["roc_curve_" ~ model] %}
+                    <div class="plot-card">
+                        <div class="plot-title">ROC Curve (last fold)</div>
+                        <img src="{{ plots["roc_curve_" ~ model] }}" alt="ROC Curve {{ model }}">
+                    </div>
+                    {% endif %}
+                    {% if plots["pr_curve_" ~ model] %}
+                    <div class="plot-card">
+                        <div class="plot-title">Precision-Recall Curve (last fold)</div>
+                        <img src="{{ plots["pr_curve_" ~ model] }}" alt="Precision-Recall Curve {{ model }}">
+                    </div>
+                    {% endif %}
+                    {% if plots["calibration_" ~ model] %}
+                    <div class="plot-card">
+                        <div class="plot-title">Calibration Curve (last fold)</div>
+                        <img src="{{ plots["calibration_" ~ model] }}" alt="Calibration Curve {{ model }}">
+                    </div>
+                    {% endif %}
+                    {% if plots["residuals_" ~ model] %}
+                    <div class="plot-card">
+                        <div class="plot-title">Residual Analysis (last fold)</div>
+                        <img src="{{ plots["residuals_" ~ model] }}" alt="Residuals {{ model }}">
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        {% endfor %}
+        {% endif %}
+
+        {% if overfitting %}
+        <div class="card">
+            <h2>Overfitting Detection</h2>
+            <p class="section-intro">Train/validation gap analysis highlighting potential overfitting signals.</p>
+            {% for model, of in overfitting.items() %}
+                <h3>{{ model }} — <span class="badge badge-warning">{{ of.status }}</span></h3>
+                <p>
+                    <strong>Primary metric:</strong> {{ of.primary_metric }}<br>
+                    <strong>Average train score:</strong> {{ "%.4f" | format(of.avg_train) }}<br>
+                    <strong>Average validation score:</strong> {{ "%.4f" | format(of.avg_val) }}<br>
+                    <strong>Absolute gap:</strong> {{ "%.4f" | format(of.gap) }}<br>
+                    <strong>Relative gap:</strong> {{ "%.2f" | format(of.relative_gap * 100) }}%
+                </p>
+                {% if of.warnings %}
+                <ul class="warning-list">
+                    {% for warning in of.warnings %}
+                    <li>{{ warning }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if feature_importance %}
+        <div class="card">
+            <h2>Feature Importance</h2>
+            <p class="section-intro">Importance scores extracted from the final CV fold model.</p>
+            {% for model, fi in feature_importance.items() %}
+                <h3>{{ model }}</h3>
+                <table>
+                    <thead>
+                        <tr><th>Feature</th><th>Importance</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for feature, importance in fi.items() %}
+                        <tr><td>{{ feature }}</td><td>{{ "%.4f" | format(importance) }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="footer">
+            Generated by ml-model-benchmark-suite
+        </div>
     </div>
 </body>
 </html>
