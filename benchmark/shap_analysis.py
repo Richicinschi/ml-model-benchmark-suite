@@ -72,6 +72,37 @@ def compute_shap_values(
         return None
 
 
+def plot_shap_summary(
+    shap_values: Any,
+    X: pd.DataFrame,
+    output_path: Optional[str] = None,
+    title: Optional[str] = None,
+) -> Optional[Any]:
+    """Generate a SHAP summary plot as a matplotlib figure."""
+    if not HAS_SHAP:
+        return None
+    try:
+        import matplotlib.pyplot as plt
+        shap_values_arr = np.asarray(shap_values)
+        if shap_values_arr.ndim == 3:
+            # Multi-class: summarize using mean absolute across classes
+            shap_values_arr = np.mean(np.abs(shap_values_arr), axis=0)
+        plt.figure(figsize=(8, 6))
+        shap.summary_plot(shap_values_arr, X, show=False)
+        fig = plt.gcf()
+        if title:
+            fig.suptitle(title, y=1.02)
+        plt.tight_layout()
+        if output_path:
+            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+            fig.savefig(output_path, dpi=150, bbox_inches="tight")
+            plt.close(fig)
+            return None
+        return fig
+    except Exception:
+        return None
+
+
 def rank_shap_importance(
     importance_dict: Dict[str, float],
     top_n: Optional[int] = None,

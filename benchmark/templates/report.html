@@ -179,6 +179,12 @@
                         <img src="{{ plots["residuals_" ~ model] }}" alt="Residuals {{ model }}">
                     </div>
                     {% endif %}
+                    {% if plots["shap_summary_" ~ model] %}
+                    <div class="plot-card">
+                        <div class="plot-title">SHAP Summary</div>
+                        <img src="{{ plots["shap_summary_" ~ model] }}" alt="SHAP Summary {{ model }}">
+                    </div>
+                    {% endif %}
                 </div>
             </div>
             {% endif %}

@@ -22,6 +22,7 @@ from .plots import (
     plot_roc_curve,
     plot_train_val_curves,
 )
+from .shap_analysis import plot_shap_summary
 from .utils import setup_logger
 
 
@@ -202,6 +203,22 @@ class ReportGenerator:
                         plots[f"learning_curve_{model_name}"] = self._fig_to_base64(fig)
                 except Exception as exc:
                     self.logger.warning(f"Learning curve failed for {model_name}: {exc}")
+
+        # SHAP summary plots
+        if X is not None:
+            for model_name, model_res in model_results.items():
+                shap_data = model_res.get("shap")
+                if shap_data and shap_data.get("shap_values") is not None:
+                    try:
+                        fig = plot_shap_summary(
+                            shap_data["shap_values"],
+                            X,
+                            title=f"{model_name} - SHAP Summary",
+                        )
+                        if fig:
+                            plots[f"shap_summary_{model_name}"] = self._fig_to_base64(fig)
+                    except Exception as exc:
+                        self.logger.warning(f"SHAP summary plot failed for {model_name}: {exc}")
 
         return plots
 
