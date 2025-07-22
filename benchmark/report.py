@@ -22,7 +22,7 @@ from .plots import (
     plot_roc_curve,
     plot_train_val_curves,
 )
-from .shap_analysis import plot_shap_summary
+from .shap_analysis import plot_shap_dependence, plot_shap_summary
 from .utils import setup_logger
 
 
@@ -219,6 +219,22 @@ class ReportGenerator:
                             plots[f"shap_summary_{model_name}"] = self._fig_to_base64(fig)
                     except Exception as exc:
                         self.logger.warning(f"SHAP summary plot failed for {model_name}: {exc}")
+
+                    # SHAP dependence plot for top feature
+                    try:
+                        importance = shap_data.get("feature_importance", {})
+                        if importance:
+                            top_feature = max(importance, key=importance.get)
+                            fig = plot_shap_dependence(
+                                shap_data["shap_values"],
+                                X,
+                                feature=top_feature,
+                                title=f"{model_name} - SHAP Dependence ({top_feature})",
+                            )
+                            if fig:
+                                plots[f"shap_dependence_{model_name}"] = self._fig_to_base64(fig)
+                    except Exception as exc:
+                        self.logger.warning(f"SHAP dependence plot failed for {model_name}: {exc}")
 
         return plots
 

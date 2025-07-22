@@ -132,7 +132,7 @@
 
         <!-- Per-model diagnostics -->
         {% for model in models %}
-            {% set has_plots = plots["learning_curve_" ~ model] or plots["train_val_" ~ model] or plots["confusion_matrix_" ~ model] or plots["roc_curve_" ~ model] or plots["pr_curve_" ~ model] or plots["calibration_" ~ model] or plots["residuals_" ~ model] %}
+            {% set has_plots = plots["learning_curve_" ~ model] or plots["train_val_" ~ model] or plots["confusion_matrix_" ~ model] or plots["roc_curve_" ~ model] or plots["pr_curve_" ~ model] or plots["calibration_" ~ model] or plots["residuals_" ~ model] or plots["shap_summary_" ~ model] or plots["shap_dependence_" ~ model] %}
             {% if has_plots %}
             <div class="card">
                 <h2>{{ model }} Diagnostics</h2>
@@ -183,6 +183,12 @@
                     <div class="plot-card">
                         <div class="plot-title">SHAP Summary</div>
                         <img src="{{ plots["shap_summary_" ~ model] }}" alt="SHAP Summary {{ model }}">
+                    </div>
+                    {% endif %}
+                    {% if plots["shap_dependence_" ~ model] %}
+                    <div class="plot-card">
+                        <div class="plot-title">SHAP Dependence</div>
+                        <img src="{{ plots["shap_dependence_" ~ model] }}" alt="SHAP Dependence {{ model }}">
                     </div>
                     {% endif %}
                 </div>
