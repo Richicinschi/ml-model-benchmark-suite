@@ -391,3 +391,54 @@ def plot_residuals(
         plt.close(fig)
         return None
     return fig
+
+
+def plot_feature_importance_comparison(
+    model_importances: Dict[str, Dict[str, float]],
+    top_n: int = 10,
+    output_path: Optional[str] = None,
+    title: Optional[str] = None,
+) -> Optional[plt.Figure]:
+    """Grouped horizontal bar plot comparing top feature importances across models."""
+    if not model_importances:
+        return None
+
+    # Gather all features and average their ranks across models to find overall top features
+    feature_scores: Dict[str, float] = {}
+    for importances in model_importances.values():
+        sorted_features = sorted(importances.items(), key=lambda x: x[1], reverse=True)
+        for rank, (feature, _) in enumerate(sorted_features):
+            feature_scores[feature] = feature_scores.get(feature, 0) + rank
+
+    # Average rank (lower is better)
+    for feature in feature_scores:
+        feature_scores[feature] /= len(model_importances)
+
+    top_features = sorted(feature_scores.keys(), key=lambda f: feature_scores[f])[:top_n]
+    top_features = list(reversed(top_features))  # reverse for top-down plotting
+
+    models = list(model_importances.keys())
+    y = np.arange(len(top_features))
+    height = 0.7 / len(models)
+    colors = plt.cm.viridis(np.linspace(0.2, 0.9, len(models)))
+
+    fig, ax = plt.subplots(figsize=(max(7, len(models) * 0.5 + 6), max(5, len(top_features) * 0.5)))
+    for i, (model, color) in enumerate(zip(models, colors)):
+        values = [model_importances[model].get(f, 0.0) for f in top_features]
+        offset = height * (i - len(models) / 2 + 0.5)
+        ax.barh(y + offset, values, height, label=model, color=color)
+
+    ax.set_yticks(y)
+    ax.set_yticklabels(top_features)
+    ax.set_xlabel("Importance")
+    ax.set_title(title or f"Top {top_n} Feature Importance Comparison")
+    ax.legend()
+    ax.grid(True, axis="x", linestyle="--", alpha=0.4)
+    plt.tight_layout()
+
+    if output_path:
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(output_path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        return None
+    return fig

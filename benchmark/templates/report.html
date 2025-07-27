@@ -109,10 +109,10 @@
         {% set model_results = {} %}
 
         <!-- Model comparisons -->
-        {% if plots.model_comparison or plots.multi_metric_comparison %}
+        {% if plots.model_comparison or plots.multi_metric_comparison or plots.feature_importance_comparison %}
         <div class="card">
             <h2>Model Comparisons</h2>
-            <p class="section-intro">Side-by-side performance comparisons across models.</p>
+            <p class="section-intro">Side-by-side performance and explainability comparisons across models.</p>
             <div class="grid-2">
                 {% if plots.model_comparison %}
                 <div class="plot-card">
@@ -124,6 +124,12 @@
                 <div class="plot-card">
                     <div class="plot-title">Multi-Metric Comparison</div>
                     <img src="{{ plots.multi_metric_comparison }}" alt="Multi-Metric Comparison">
+                </div>
+                {% endif %}
+                {% if plots.feature_importance_comparison %}
+                <div class="plot-card">
+                    <div class="plot-title">Feature Importance Comparison</div>
+                    <img src="{{ plots.feature_importance_comparison }}" alt="Feature Importance Comparison">
                 </div>
                 {% endif %}
             </div>

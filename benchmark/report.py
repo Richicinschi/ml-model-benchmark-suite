@@ -14,6 +14,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from .plots import (
     plot_calibration_curve,
     plot_confusion_matrix_heatmap,
+    plot_feature_importance_comparison,
     plot_learning_curve,
     plot_model_comparison,
     plot_multi_metric_comparison,
@@ -105,6 +106,24 @@ class ReportGenerator:
             )
             if fig:
                 plots["multi_metric_comparison"] = self._fig_to_base64(fig)
+
+        # Feature importance comparison across models
+        model_importances = {
+            name: res.get("feature_importance")
+            for name, res in model_results.items()
+            if res.get("feature_importance") is not None
+        }
+        if len(model_importances) > 1:
+            try:
+                fig = plot_feature_importance_comparison(
+                    model_importances,
+                    top_n=10,
+                    title="Feature Importance Comparison",
+                )
+                if fig:
+                    plots["feature_importance_comparison"] = self._fig_to_base64(fig)
+            except Exception as exc:
+                self.logger.warning(f"Feature importance comparison plot failed: {exc}")
 
         # Train vs validation curves for overfitting detection
         for model_name, model_res in model_results.items():
