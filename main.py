@@ -7,6 +7,7 @@ import sys
 # Import models to ensure they register themselves
 import benchmark.models  # noqa: F401
 
+from benchmark.compare import ExperimentComparator
 from benchmark.report import ReportGenerator
 from benchmark.runner import BenchmarkRunner
 from benchmark.tracking import ExperimentTracker
@@ -41,6 +42,13 @@ def main():
         type=int,
         help="Retrieve and generate a report for a historical run by ID",
     )
+    parser.add_argument(
+        "--compare",
+        nargs=2,
+        type=int,
+        metavar=("RUN_A", "RUN_B"),
+        help="Compare two experiment runs by ID and generate a comparison report",
+    )
 
     args = parser.parse_args()
 
@@ -68,6 +76,17 @@ def main():
                 f"{run['id']:<5} {run['experiment_name']:<30} "
                 f"{run['status']:<12} {run['timestamp']}"
             )
+        return 0
+
+    if args.compare:
+        run_id_a, run_id_b = args.compare
+        comparator = ExperimentComparator()
+        comparison = comparator.compare(run_id_a, run_id_b)
+        if comparison is None:
+            return 1
+        report_path = args.report or f"compare_run_{run_id_a}_vs_{run_id_b}.html"
+        comparator.generate_report(comparison, report_path)
+        print(f"Comparison report saved to: {report_path}")
         return 0
 
     if args.run_id is not None:

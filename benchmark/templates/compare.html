@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Experiment Comparison - Run {{ run_a.id }} vs Run {{ run_b.id }}</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --bg: #f4f6f8;
+            --card-bg: #ffffff;
+            --text: #333333;
+            --muted: #666666;
+            --border: #e1e4e8;
+            --positive: #27ae60;
+            --negative: #c0392b;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 30px 20px; }
+        h1, h2, h3 { color: var(--primary); margin-top: 0; }
+        h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+        .card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+        }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; font-size: 0.95rem; }
+        th, td { border: 1px solid var(--border); padding: 10px; text-align: left; }
+        th { background: var(--accent); color: #fff; }
+        tr:nth-child(even) { background: #fafbfc; }
+        .delta-positive { color: var(--positive); font-weight: 600; }
+        .delta-negative { color: var(--negative); font-weight: 600; }
+        .delta-neutral { color: var(--muted); }
+        .meta-label { color: var(--muted); font-size: 0.9rem; }
+        .meta-value { font-weight: 600; }
+        .footer { margin-top: 40px; font-size: 0.9em; color: var(--muted); text-align: center; }
+        @media (max-width: 600px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>Experiment Comparison</h1>
+            <p class="meta-label">Comparing Run {{ run_a.id }} vs Run {{ run_b.id }}</p>
+        </div>
+
+        <div class="card">
+            <h2>Run Details</h2>
+            <div class="grid-2">
+                <div>
+                    <p><span class="meta-label">Run A ID:</span> <span class="meta-value">{{ run_a.id }}</span></p>
+                    <p><span class="meta-label">Name:</span> <span class="meta-value">{{ run_a.experiment_name }}</span></p>
+                    <p><span class="meta-label">Status:</span> <span class="meta-value">{{ run_a.status }}</span></p>
+                    <p><span class="meta-label">Timestamp:</span> <span class="meta-value">{{ run_a.timestamp }}</span></p>
+                    <p><span class="meta-label">Dataset:</span> <span class="meta-value">{{ run_a.dataset | tojson }}</span></p>
+                    <p><span class="meta-label">Models:</span> <span class="meta-value">{{ run_a.models | join(", ") }}</span></p>
+                </div>
+                <div>
+                    <p><span class="meta-label">Run B ID:</span> <span class="meta-value">{{ run_b.id }}</span></p>
+                    <p><span class="meta-label">Name:</span> <span class="meta-value">{{ run_b.experiment_name }}</span></p>
+                    <p><span class="meta-label">Status:</span> <span class="meta-value">{{ run_b.status }}</span></p>
+                    <p><span class="meta-label">Timestamp:</span> <span class="meta-value">{{ run_b.timestamp }}</span></p>
+                    <p><span class="meta-label">Dataset:</span> <span class="meta-value">{{ run_b.dataset | tojson }}</span></p>
+                    <p><span class="meta-label">Models:</span> <span class="meta-value">{{ run_b.models | join(", ") }}</span></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Side-by-Side Metrics</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th>Metric</th>
+                        <th>Run {{ run_a.id }}</th>
+                        <th>Run {{ run_b.id }}</th>
+                        <th>Delta (B - A)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in metric_rows %}
+                    <tr>
+                        <td>{{ row.model }}</td>
+                        <td>{{ row.metric }}</td>
+                        <td>{{ "%.4f" | format(row.run_a) if row.run_a is not none else "-" }}</td>
+                        <td>{{ "%.4f" | format(row.run_b) if row.run_b is not none else "-" }}</td>
+                        <td>
+                            {% if row.delta is not none %}
+                                {% if row.delta > 0 %}
+                                    <span class="delta-positive">+{{ "%.4f" | format(row.delta) }}</span>
+                                {% elif row.delta < 0 %}
+                                    <span class="delta-negative">{{ "%.4f" | format(row.delta) }}</span>
+                                {% else %}
+                                    <span class="delta-neutral">{{ "%.4f" | format(row.delta) }}</span>
+                                {% endif %}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="footer">
+            Generated by ml-model-benchmark-suite
+        </div>
+    </div>
+</body>
+</html>
