@@ -96,6 +96,38 @@ class ExperimentTracker:
 
         return [self._row_to_dict(row) for row in rows]
 
+    def query_runs(
+        self,
+        model: Optional[str] = None,
+        dataset_source: Optional[str] = None,
+        dataset_name: Optional[str] = None,
+        limit: int = 100,
+    ) -> list[Dict[str, Any]]:
+        """Query experiment runs by model or dataset criteria."""
+        query = "SELECT * FROM experiment_runs WHERE 1=1"
+        params: list[Any] = []
+
+        if model is not None:
+            query += " AND models LIKE ?"
+            params.append(f'%"{model}"%')
+
+        if dataset_source is not None:
+            query += " AND dataset LIKE ?"
+            params.append(f'%"source": "{dataset_source}"%')
+
+        if dataset_name is not None:
+            query += " AND dataset LIKE ?"
+            params.append(f'%"name": "{dataset_name}"%')
+
+        query += " ORDER BY timestamp DESC LIMIT ?"
+        params.append(limit)
+
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute(query, params)
+            rows = cursor.fetchall()
+
+        return [self._row_to_dict(row) for row in rows]
+
     def _row_to_dict(self, row: Any) -> Dict[str, Any]:
         """Convert a SQLite row tuple to a dictionary."""
         return {

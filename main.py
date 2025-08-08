@@ -49,6 +49,16 @@ def main():
         metavar=("RUN_A", "RUN_B"),
         help="Compare two experiment runs by ID and generate a comparison report",
     )
+    parser.add_argument(
+        "--query-model",
+        type=str,
+        help="Query experiment history by model name",
+    )
+    parser.add_argument(
+        "--query-dataset",
+        type=str,
+        help="Query experiment history by dataset name or source (e.g., csv, sklearn, iris)",
+    )
 
     args = parser.parse_args()
 
@@ -75,6 +85,41 @@ def main():
             print(
                 f"{run['id']:<5} {run['experiment_name']:<30} "
                 f"{run['status']:<12} {run['timestamp']}"
+            )
+        return 0
+
+    if args.query_model or args.query_dataset:
+        tracker = ExperimentTracker()
+        model = args.query_model
+        dataset = args.query_dataset
+
+        # Heuristic: if dataset looks like a source keyword, use dataset_source
+        dataset_source = None
+        dataset_name = None
+        if dataset:
+            if dataset.lower() in {"csv", "sklearn", "openml"}:
+                dataset_source = dataset.lower()
+            else:
+                dataset_name = dataset
+
+        runs = tracker.query_runs(
+            model=model,
+            dataset_source=dataset_source,
+            dataset_name=dataset_name,
+            limit=20,
+        )
+        if not runs:
+            print("No matching experiment history found.")
+            return 0
+        print(f"{'ID':<5} {'Experiment':<30} {'Dataset':<25} {'Models':<30} {'Timestamp'}")
+        print("-" * 95)
+        for run in runs:
+            ds = run.get("dataset", {})
+            ds_label = ds.get("name", ds.get("source", "-"))
+            models_label = ", ".join(run.get("models", [])[:3])
+            print(
+                f"{run['id']:<5} {run['experiment_name']:<30} "
+                f"{ds_label:<25} {models_label:<30} {run['timestamp']}"
             )
         return 0
 
