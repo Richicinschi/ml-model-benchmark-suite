@@ -18,7 +18,7 @@ class ExperimentTracker:
         self._init_db()
 
     def _init_db(self) -> None:
-        """Create the results table if it does not exist."""
+        """Create the results and tuning_results tables if they do not exist."""
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(
@@ -31,6 +31,21 @@ class ExperimentTracker:
                     models TEXT,
                     status TEXT,
                     results_json TEXT
+                )
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS tuning_results (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    run_id INTEGER NOT NULL,
+                    model_name TEXT NOT NULL,
+                    method TEXT,
+                    best_params TEXT,
+                    best_score REAL,
+                    cv_results_json TEXT,
+                    timestamp TEXT NOT NULL,
+                    FOREIGN KEY (run_id) REFERENCES experiment_runs(id) ON DELETE CASCADE
                 )
                 """
             )
@@ -127,6 +142,59 @@ class ExperimentTracker:
             rows = cursor.fetchall()
 
         return [self._row_to_dict(row) for row in rows]
+
+    def save_tuning_result(
+        self,
+        run_id: int,
+        model_name: str,
+        tuning_result: Dict[str, Any],
+    ) -> int:
+        """Store hyperparameter tuning results for a given run and model."""
+        timestamp = datetime.utcnow().isoformat()
+        method = tuning_result.get("method", "unknown")
+        best_params = json.dumps(tuning_result.get("best_params", {}))
+        best_score = tuning_result.get("best_score")
+        cv_results_json = json.dumps(
+            tuning_result.get("cv_results", {}), default=str
+        )
+
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO tuning_results
+                (run_id, model_name, method, best_params, best_score, cv_results_json, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (run_id, model_name, method, best_params, best_score, cv_results_json, timestamp),
+            )
+            conn.commit()
+            row_id = cursor.lastrowid
+
+        self.logger.info(f"Saved tuning result for run {run_id}, model {model_name}")
+        return row_id
+
+    def get_tuning_results(self, run_id: int) -> list[Dict[str, Any]]:
+        """Retrieve tuning results for a given experiment run."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute(
+                "SELECT * FROM tuning_results WHERE run_id = ?",
+                (run_id,),
+            )
+            rows = cursor.fetchall()
+
+        return [
+            {
+                "id": row[0],
+                "run_id": row[1],
+                "model_name": row[2],
+                "method": row[3],
+                "best_params": json.loads(row[4]) if row[4] else {},
+                "best_score": row[5],
+                "cv_results": json.loads(row[6]) if row[6] else {},
+                "timestamp": row[7],
+            }
+            for row in rows
+        ]
 
     def _row_to_dict(self, row: Any) -> Dict[str, Any]:
         """Convert a SQLite row tuple to a dictionary."""

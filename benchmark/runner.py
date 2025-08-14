@@ -17,6 +17,7 @@ from .shap_analysis import compute_shap_values
 from .tracking import ExperimentTracker
 from .preprocessing import PreprocessingPipeline
 from .registry import REGISTRY
+from .tuning import TuningConfig, run_tuning
 from .utils import setup_logger
 
 
@@ -195,9 +196,33 @@ class BenchmarkRunner:
         self.X_processed, self.y_processed = self.preprocess_data()
         self.model_instances = self.resolve_models()
 
+        tuning_config = TuningConfig(self.config.tuning)
+        tuning_enabled = tuning_config.is_enabled()
+        param_spaces = self.config.tuning.get("param_spaces", {})
+
         model_results = {}
+        tuning_results: Dict[str, Any] = {}
         for name in self.config.models.keys():
+            if tuning_enabled:
+                param_space = param_spaces.get(name)
+                if param_space:
+                    tuning_result = run_tuning(
+                        model_name=name,
+                        tuning_config=tuning_config,
+                        param_space=param_space,
+                        X=self.X_processed,
+                        y=self.y_processed,
+                    )
+                    tuning_results[name] = tuning_result
+                    # Update resolved model with best params for CV
+                    self.model_instances[name] = REGISTRY.build(name, tuning_result["best_params"])
+                    self.logger.info(f"Tuning complete for {name}: best_params={tuning_result['best_params']}")
+                else:
+                    self.logger.warning(f"Tuning enabled but no param_space for {name}; skipping tuning")
+
             model_results[name] = self._run_cv(name, self.model_instances[name], self.X_processed, self.y_processed)
+            if name in tuning_results:
+                model_results[name]["tuning"] = tuning_results[name]
 
         results = {
             "experiment_name": self.config.experiment_name,
@@ -209,6 +234,7 @@ class BenchmarkRunner:
             },
             "preprocessing": self.config.preprocessing,
             "cv": self.config.cv,
+            "tuning": self.config.tuning,
             "data_shape": {
                 "raw": {"X": self.X.shape, "y": self.y.shape},
                 "processed": {"X": self.X_processed.shape, "y": self.y_processed.shape},
@@ -220,6 +246,9 @@ class BenchmarkRunner:
         tracker = ExperimentTracker()
         run_id = tracker.save_run(results)
         results["run_id"] = run_id
+
+        for name, tuning_result in tuning_results.items():
+            tracker.save_tuning_result(run_id, name, tuning_result)
 
         self.logger.info("Experiment completed successfully")
         return results
