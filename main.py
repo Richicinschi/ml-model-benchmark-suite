@@ -59,6 +59,16 @@ def main():
         type=str,
         help="Query experiment history by dataset name or source (e.g., csv, sklearn, iris)",
     )
+    parser.add_argument(
+        "--tags",
+        type=str,
+        help="Comma-separated tags for the experiment (overrides config)",
+    )
+    parser.add_argument(
+        "--notes",
+        type=str,
+        help="Notes for the experiment (overrides config)",
+    )
 
     args = parser.parse_args()
 
@@ -148,6 +158,10 @@ def main():
 
     if args.config:
         runner = BenchmarkRunner(args.config)
+        if args.tags is not None:
+            runner.config.raw["tags"] = [t.strip() for t in args.tags.split(",") if t.strip()]
+        if args.notes is not None:
+            runner.config.raw["notes"] = args.notes
         results = runner.run()
         print(f"Experiment '{results['experiment_name']}' completed.")
         if results.get("run_id") is not None:

@@ -84,6 +84,17 @@
             </p>
             <p><strong>Dataset:</strong> {{ dataset | tojson }}</p>
             <p><strong>Models:</strong> {{ models | join(", ") }}</p>
+            {% if tags %}
+            <p>
+                <strong>Tags:</strong>
+                {% for tag in tags %}
+                    <span class="badge badge-success">{{ tag }}</span>
+                {% endfor %}
+            </p>
+            {% endif %}
+            {% if notes %}
+            <p><strong>Notes:</strong> {{ notes }}</p>
+            {% endif %}
         </div>
 
         {% if aggregated_metrics %}

@@ -235,6 +235,8 @@ class BenchmarkRunner:
             "preprocessing": self.config.preprocessing,
             "cv": self.config.cv,
             "tuning": self.config.tuning,
+            "tags": self.config.tags,
+            "notes": self.config.notes,
             "data_shape": {
                 "raw": {"X": self.X.shape, "y": self.y.shape},
                 "processed": {"X": self.X_processed.shape, "y": self.y_processed.shape},

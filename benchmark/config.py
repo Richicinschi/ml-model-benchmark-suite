@@ -80,6 +80,17 @@ class ExperimentConfig:
     def tuning(self) -> Dict[str, Any]:
         return self.raw.get("tuning", {})
 
+    @property
+    def tags(self) -> list[str]:
+        tags = self.raw.get("tags", [])
+        if isinstance(tags, str):
+            return [t.strip() for t in tags.split(",") if t.strip()]
+        return list(tags)
+
+    @property
+    def notes(self) -> str:
+        return self.raw.get("notes", "")
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "experiment_name": self.experiment_name,

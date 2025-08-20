@@ -30,6 +30,8 @@ class ExperimentTracker:
                     dataset TEXT,
                     models TEXT,
                     status TEXT,
+                    tags TEXT,
+                    notes TEXT,
                     results_json TEXT
                 )
                 """
@@ -59,15 +61,17 @@ class ExperimentTracker:
         dataset = json.dumps(results.get("dataset", {}))
         models = json.dumps(results.get("models", []))
         status = results.get("status", "unknown")
+        tags = json.dumps(results.get("tags", []))
+        notes = results.get("notes", "")
         results_json = json.dumps(results, default=str)
 
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.execute(
                 """
-                INSERT INTO experiment_runs (experiment_name, timestamp, dataset, models, status, results_json)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO experiment_runs (experiment_name, timestamp, dataset, models, status, tags, notes, results_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (experiment_name, timestamp, dataset, models, status, results_json),
+                (experiment_name, timestamp, dataset, models, status, tags, notes, results_json),
             )
             conn.commit()
             row_id = cursor.lastrowid
@@ -205,5 +209,7 @@ class ExperimentTracker:
             "dataset": json.loads(row[3]) if row[3] else {},
             "models": json.loads(row[4]) if row[4] else [],
             "status": row[5],
-            "results": json.loads(row[6]) if row[6] else {},
+            "tags": json.loads(row[6]) if row[6] else [],
+            "notes": row[7] if len(row) > 7 else "",
+            "results": json.loads(row[8]) if len(row) > 8 and row[8] else {},
         }

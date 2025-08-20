@@ -292,6 +292,8 @@ class ReportGenerator:
             status=results.get("status", "unknown"),
             dataset=results.get("dataset", {}),
             models=results.get("models", []),
+            tags=results.get("tags", []),
+            notes=results.get("notes", ""),
             aggregated_metrics=aggregated_metrics,
             feature_importance=feature_importance,
             overfitting=overfitting,

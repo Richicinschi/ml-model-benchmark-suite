@@ -68,6 +68,8 @@
                     <p><span class="meta-label">Timestamp:</span> <span class="meta-value">{{ run_a.timestamp }}</span></p>
                     <p><span class="meta-label">Dataset:</span> <span class="meta-value">{{ run_a.dataset | tojson }}</span></p>
                     <p><span class="meta-label">Models:</span> <span class="meta-value">{{ run_a.models | join(", ") }}</span></p>
+                    {% if run_a.tags %}<p><span class="meta-label">Tags:</span> <span class="meta-value">{{ run_a.tags | join(", ") }}</span></p>{% endif %}
+                    {% if run_a.notes %}<p><span class="meta-label">Notes:</span> <span class="meta-value">{{ run_a.notes }}</span></p>{% endif %}
                 </div>
                 <div>
                     <p><span class="meta-label">Run B ID:</span> <span class="meta-value">{{ run_b.id }}</span></p>
@@ -76,6 +78,8 @@
                     <p><span class="meta-label">Timestamp:</span> <span class="meta-value">{{ run_b.timestamp }}</span></p>
                     <p><span class="meta-label">Dataset:</span> <span class="meta-value">{{ run_b.dataset | tojson }}</span></p>
                     <p><span class="meta-label">Models:</span> <span class="meta-value">{{ run_b.models | join(", ") }}</span></p>
+                    {% if run_b.tags %}<p><span class="meta-label">Tags:</span> <span class="meta-value">{{ run_b.tags | join(", ") }}</span></p>{% endif %}
+                    {% if run_b.notes %}<p><span class="meta-label">Notes:</span> <span class="meta-value">{{ run_b.notes }}</span></p>{% endif %}
                 </div>
             </div>
         </div>

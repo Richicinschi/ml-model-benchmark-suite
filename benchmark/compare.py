@@ -43,6 +43,8 @@ class ExperimentComparator:
                 "status": results_a.get("status", "unknown"),
                 "dataset": results_a.get("dataset", {}),
                 "models": results_a.get("models", []),
+                "tags": results_a.get("tags", []),
+                "notes": results_a.get("notes", ""),
                 "aggregated_metrics": {
                     name: res.get("aggregated", {})
                     for name, res in results_a.get("results", {}).items()
@@ -55,6 +57,8 @@ class ExperimentComparator:
                 "status": results_b.get("status", "unknown"),
                 "dataset": results_b.get("dataset", {}),
                 "models": results_b.get("models", []),
+                "tags": results_b.get("tags", []),
+                "notes": results_b.get("notes", ""),
                 "aggregated_metrics": {
                     name: res.get("aggregated", {})
                     for name, res in results_b.get("results", {}).items()
