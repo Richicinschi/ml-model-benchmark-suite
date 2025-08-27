@@ -8,6 +8,7 @@ import sys
 import benchmark.models  # noqa: F401
 
 from benchmark.compare import ExperimentComparator
+from benchmark.export import ResultsExporter
 from benchmark.report import ReportGenerator
 from benchmark.runner import BenchmarkRunner
 from benchmark.tracking import ExperimentTracker
@@ -68,6 +69,21 @@ def main():
         "--notes",
         type=str,
         help="Notes for the experiment (overrides config)",
+    )
+    parser.add_argument(
+        "--export-json",
+        type=str,
+        help="Export a run or all runs to JSON (use with --run-id or --export-all)",
+    )
+    parser.add_argument(
+        "--export-csv",
+        type=str,
+        help="Export a run or all runs to CSV (use with --run-id or --export-all)",
+    )
+    parser.add_argument(
+        "--export-all",
+        action="store_true",
+        help="Export all runs instead of a single run (use with --export-json or --export-csv)",
     )
 
     args = parser.parse_args()
@@ -142,6 +158,32 @@ def main():
         report_path = args.report or f"compare_run_{run_id_a}_vs_{run_id_b}.html"
         comparator.generate_report(comparison, report_path)
         print(f"Comparison report saved to: {report_path}")
+        return 0
+
+    if args.export_json or args.export_csv:
+        exporter = ResultsExporter()
+        try:
+            if args.export_json:
+                if args.export_all:
+                    path = exporter.export_all_runs_json(args.export_json)
+                else:
+                    if args.run_id is None:
+                        print("--run-id is required when exporting a single run")
+                        return 1
+                    path = exporter.export_run_json(args.run_id, args.export_json)
+                print(f"Exported to JSON: {path}")
+            if args.export_csv:
+                if args.export_all:
+                    path = exporter.export_all_runs_csv(args.export_csv)
+                else:
+                    if args.run_id is None:
+                        print("--run-id is required when exporting a single run")
+                        return 1
+                    path = exporter.export_run_csv(args.run_id, args.export_csv)
+                print(f"Exported to CSV: {path}")
+        except ValueError as exc:
+            print(f"Export failed: {exc}")
+            return 1
         return 0
 
     if args.run_id is not None:
