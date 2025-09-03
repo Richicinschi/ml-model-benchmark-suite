@@ -7,6 +7,7 @@ import sys
 # Import models to ensure they register themselves
 import benchmark.models  # noqa: F401
 
+from benchmark.batch import BatchRunner
 from benchmark.compare import ExperimentComparator
 from benchmark.export import ResultsExporter
 from benchmark.report import ReportGenerator
@@ -85,8 +86,21 @@ def main():
         action="store_true",
         help="Export all runs instead of a single run (use with --export-json or --export-csv)",
     )
+    parser.add_argument(
+        "--batch",
+        nargs="+",
+        type=str,
+        metavar="CONFIG",
+        help="Run multiple experiment configs in batch mode",
+    )
 
     args = parser.parse_args()
+
+    if args.batch:
+        batch = BatchRunner(args.batch, report_dir=args.report)
+        batch.run_all()
+        batch.print_summary()
+        return 0
 
     if args.list_models:
         from benchmark.registry import REGISTRY
