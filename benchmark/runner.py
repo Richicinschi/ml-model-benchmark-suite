@@ -22,7 +22,16 @@ from .utils import setup_logger
 
 
 class BenchmarkRunner:
-    """High-level runner that executes benchmark experiments from configuration."""
+    """High-level runner that executes benchmark experiments from configuration.
+
+    This class handles the full experiment lifecycle: data loading,
+    preprocessing, optional hyperparameter tuning, cross-validation,
+    metric aggregation, feature importance extraction, SHAP analysis,
+    overfitting detection, and result persistence.
+
+    Args:
+        config_path: Path to the experiment configuration file.
+    """
 
     def __init__(self, config_path: str):
         self.config = ExperimentConfig(config_path)
@@ -36,7 +45,11 @@ class BenchmarkRunner:
         self.model_instances: Dict[str, Any] = {}
 
     def _validate_models(self) -> None:
-        """Ensure all requested models are registered."""
+        """Ensure all requested models are registered in the global registry.
+
+        Raises:
+            ValueError: If any model name in the config is not registered.
+        """
         unknown: List[str] = []
         for name in self.config.models.keys():
             if not REGISTRY.is_registered(name):
@@ -50,13 +63,23 @@ class BenchmarkRunner:
         self.logger.info(f"All {len(self.config.models)} models validated")
 
     def load_data(self) -> Tuple[pd.DataFrame, pd.Series]:
-        """Load dataset according to configuration."""
+        """Load the dataset according to the configuration.
+
+        Returns:
+            A tuple of ``(X, y)`` where ``X`` is the feature matrix and
+            ``y`` is the target vector.
+        """
         self.X, self.y = load_dataset(self.config.dataset)
         self.logger.info(f"Dataset loaded: X={self.X.shape}, y={self.y.shape}")
         return self.X, self.y
 
     def preprocess_data(self) -> Tuple[pd.DataFrame, pd.Series]:
-        """Build and apply preprocessing pipeline."""
+        """Build and apply the preprocessing pipeline.
+
+        Returns:
+            A tuple of ``(X_processed, y_processed)`` after scaling,
+            imputation, encoding, and target encoding.
+        """
         self.preprocessor = PreprocessingPipeline(self.config.preprocessing).build(self.X)
         X_transformed = self.preprocessor.fit_transform(self.X)
         y_transformed = self.preprocessor.fit_transform_target(self.y)
@@ -64,7 +87,12 @@ class BenchmarkRunner:
         return X_transformed, y_transformed
 
     def resolve_models(self) -> Dict[str, Any]:
-        """Build model instances from configuration."""
+        """Build model instances from the configuration.
+
+        Returns:
+            A dictionary mapping model names to instantiated
+            :class:`ModelWrapper` objects.
+        """
         instances: Dict[str, Any] = {}
         for name, overrides in self.config.models.items():
             instances[name] = REGISTRY.build(name, overrides or None)
@@ -78,7 +106,21 @@ class BenchmarkRunner:
         X: pd.DataFrame,
         y: pd.Series,
     ) -> Dict[str, Any]:
-        """Run cross-validation for a single model and return fold results."""
+        """Run cross-validation for a single model and return fold results.
+
+        Args:
+            model_name: Registered name of the model to evaluate.
+            model_wrapper: Instantiated :class:`ModelWrapper` for the
+                model. This instance is used only for type resolution;
+                fresh clones are trained per fold.
+            X: Preprocessed feature matrix.
+            y: Preprocessed target vector.
+
+        Returns:
+            Dictionary containing fold-level metrics, aggregated
+            statistics, feature importance, SHAP results, and
+            overfitting warnings.
+        """
         cv = build_cv_strategy(self.config.cv, X, y)
         splits = get_cv_splits(cv, X, y)
         task_type = REGISTRY.get(model_name)["type"]
@@ -160,7 +202,16 @@ class BenchmarkRunner:
     def _aggregate_fold_metrics(
         self, fold_results: List[Dict[str, Any]]
     ) -> Dict[str, Dict[str, float]]:
-        """Compute mean and std of scalar metrics across CV folds."""
+        """Compute mean and standard deviation of scalar metrics across CV folds.
+
+        Args:
+            fold_results: List of per-fold result dictionaries.
+
+        Returns:
+            Nested dictionary with ``train`` and ``val`` keys, each
+            mapping metric names to their mean and standard deviation
+            across folds.
+        """
         if not fold_results:
             return {}
 
@@ -187,7 +238,17 @@ class BenchmarkRunner:
         return aggregated
 
     def run(self) -> Dict[str, Any]:
-        """Execute the experiment defined in the configuration."""
+        """Execute the experiment defined in the configuration.
+
+        This method loads data, preprocesses it, optionally runs
+        hyperparameter tuning, evaluates each model with cross-validation,
+        aggregates results, and persists everything to the experiment
+        tracker.
+
+        Returns:
+            A dictionary containing the full experiment results,
+            including a ``run_id`` assigned by the tracker.
+        """
         self.logger.info(f"Starting experiment: {self.config.experiment_name}")
         self.logger.info(f"Dataset config: {self.config.dataset}")
         self.logger.info(f"Models: {list(self.config.models.keys())}")
@@ -257,13 +318,27 @@ class BenchmarkRunner:
 
 
 class ExperimentRunner(Experiment):
-    """Concrete experiment implementation driven by configuration."""
+    """Concrete experiment implementation driven by configuration.
+
+    This is a lightweight implementation of :class:`Experiment` used
+    primarily for backward compatibility and base-class conformance.
+
+    Args:
+        name: Experiment name.
+        config: Experiment configuration dictionary.
+    """
 
     def __init__(self, name: str, config: Dict[str, Any]):
         super().__init__(name, config)
         self.logger = setup_logger(f"Experiment:{name}")
 
     def run(self) -> Dict[str, Any]:
+        """Run a minimal experiment and return basic metadata.
+
+        Returns:
+            Dictionary with ``experiment_name``, ``config``, and
+            ``status`` keys.
+        """
         self.logger.info(f"Running experiment: {self.name}")
         return {
             "experiment_name": self.name,
