@@ -1,5 +1,7 @@
 """Dataset loaders for CSV, sklearn built-ins, and OpenML."""
 
+import json
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
@@ -108,23 +110,23 @@ class OpenMLDatasetLoader(DatasetLoader):
         return X, y
 
 
-def load_dataset(config: Dict[str, Any]) -> Tuple[pd.DataFrame, pd.Series]:
-    """Factory function to load a dataset based on config dictionary."""
+def _build_loader(config: Dict[str, Any]) -> DatasetLoader:
+    """Build a concrete DatasetLoader from a configuration dictionary."""
     source = config.get("source", "csv")
 
     if source == "csv":
-        loader = CSVDatasetLoader(
+        return CSVDatasetLoader(
             path=config["path"],
             target_column=config["target_column"],
             **config.get("read_options", {}),
         )
     elif source == "sklearn":
-        loader = SklearnDatasetLoader(
+        return SklearnDatasetLoader(
             name=config["name"],
             as_frame=config.get("as_frame", True),
         )
     elif source == "openml":
-        loader = OpenMLDatasetLoader(
+        return OpenMLDatasetLoader(
             name_or_id=config["name_or_id"],
             version=config.get("version", 1),
             as_frame=config.get("as_frame", True),
@@ -134,4 +136,24 @@ def load_dataset(config: Dict[str, Any]) -> Tuple[pd.DataFrame, pd.Series]:
     else:
         raise ValueError(f"Unsupported dataset source: {source}")
 
+
+@lru_cache(maxsize=32)
+def _load_dataset_cached(config_json: str) -> Tuple[pd.DataFrame, pd.Series]:
+    """Cached dataset loading based on a JSON-serialized config string.
+
+    This avoids re-reading large CSV files or re-fetching datasets when the
+    same configuration is used across multiple experiment runs.
+    """
+    config = json.loads(config_json)
+    loader = _build_loader(config)
     return loader.load()
+
+
+def load_dataset(config: Dict[str, Any]) -> Tuple[pd.DataFrame, pd.Series]:
+    """Factory function to load a dataset based on config dictionary.
+
+    Repeated calls with the same configuration are cached in memory to
+    improve performance during batch or iterative workflows.
+    """
+    config_json = json.dumps(config, sort_keys=True)
+    return _load_dataset_cached(config_json)
