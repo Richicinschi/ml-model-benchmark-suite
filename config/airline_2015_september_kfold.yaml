@@ -1,0 +1,25 @@
+experiment_name: airline_delay_2015_september_kfold
+
+dataset:
+  source: csv
+  path: datasets/airline-delay-and-cancellation-data/2015_september_regression.csv
+  target_column: ARR_DELAY
+
+models:
+  lightgbm_regressor: {}
+
+preprocessing:
+  scale: standard
+  imputation: median
+  encoding: one_hot
+
+cv:
+  strategy: kfold
+  folds: 3
+
+tags:
+  - airline
+  - "2015"
+  - september
+  - regression
+  - kfold

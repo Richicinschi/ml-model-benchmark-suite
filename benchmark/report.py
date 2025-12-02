@@ -1,7 +1,7 @@
 """HTML report generation for benchmark experiment runs."""
 
 import base64
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -288,7 +288,7 @@ class ReportGenerator:
 
         html = template.render(
             experiment_name=results.get("experiment_name", "Benchmark Report"),
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=datetime.now(timezone.utc).isoformat(),
             status=results.get("status", "unknown"),
             dataset=results.get("dataset", {}),
             models=results.get("models", []),

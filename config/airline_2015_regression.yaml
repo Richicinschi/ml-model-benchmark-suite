@@ -1,0 +1,30 @@
+experiment_name: airline_delay_2015_large_sample_regression
+
+dataset:
+  source: csv
+  path: datasets/airline-delay-and-cancellation-data/2015_sample_500k_random_cleaned.csv
+  target_column: ARR_DELAY
+
+models:
+  linear_regression: {}
+  ridge: {}
+  lasso: {}
+  elasticnet: {}
+  gradient_boosting: {}
+  xgboost_regressor: {}
+  lightgbm_regressor: {}
+
+preprocessing:
+  scale: standard
+  imputation: median
+  encoding: one_hot
+
+cv:
+  strategy: kfold
+  folds: 3
+
+tags:
+  - airline
+  - "2015"
+  - full
+  - regression

@@ -16,19 +16,30 @@ except ImportError:
 from .utils import setup_logger
 
 
-def _get_shap_explainer(model: Any) -> Any:
+def _get_shap_explainer(model: Any, X: Any = None) -> Any:
     """Create an appropriate SHAP explainer for the given model."""
     if not HAS_SHAP:
         raise ImportError("shap is required for SHAP analysis")
 
-    # Tree-based models
-    if hasattr(model, "tree_") or hasattr(model, "estimators_"):
+    # Tree-based models (sklearn, xgboost, lightgbm, catboost)
+    if (
+        hasattr(model, "tree_")
+        or hasattr(model, "estimators_")
+        or hasattr(model, "get_booster")
+        or hasattr(model, "_Booster")
+        or hasattr(model, "booster")
+    ):
         return shap.TreeExplainer(model)
     # Linear models
     elif hasattr(model, "coef_"):
-        return shap.LinearExplainer(model, masker=shap.sample(model, 10))
+        if X is not None:
+            masker = shap.sample(X, 10) if hasattr(X, "shape") else X
+            return shap.LinearExplainer(model, masker=masker)
+        else:
+            return shap.KernelExplainer(model.predict, shap.sample(X, 10) if X is not None else X)
     else:
-        return shap.KernelExplainer(model.predict, shap.sample(model, 10))
+        background = shap.sample(X, 10) if X is not None else X
+        return shap.KernelExplainer(model.predict, background)
 
 
 def compute_shap_values(
@@ -46,14 +57,26 @@ def compute_shap_values(
     model = fitted_model.model if hasattr(fitted_model, "model") else fitted_model
     cols = feature_names if feature_names is not None else list(X.columns)
 
+    # Sample X for faster SHAP computation during testing
+    max_shap_samples = 2000
+    if hasattr(X, "shape") and X.shape[0] > max_shap_samples:
+        X = X.sample(n=max_shap_samples, random_state=42)
+
     try:
-        explainer = _get_shap_explainer(model)
+        explainer = _get_shap_explainer(model, X)
         shap_values = explainer.shap_values(X.values if hasattr(X, "values") else X)
 
         # For multi-class, use mean absolute SHAP across classes
         if isinstance(shap_values, list):
             mean_shap = np.mean([np.abs(sv) for sv in shap_values], axis=0)
             shap_values = mean_shap
+        elif isinstance(shap_values, np.ndarray) and shap_values.ndim == 3:
+            # New SHAP format: (n_samples, n_features, n_classes)
+            mean_shap = np.mean(np.abs(shap_values), axis=(0, 2))
+            if shap_values.shape[2] == 2:
+                shap_values = shap_values[:, :, 1]
+            else:
+                shap_values = np.mean(shap_values, axis=2)
         else:
             mean_shap = np.abs(shap_values)
 
@@ -86,8 +109,10 @@ def plot_shap_summary(
         import matplotlib.pyplot as plt
         shap_values_arr = np.asarray(shap_values)
         if shap_values_arr.ndim == 3:
-            # Multi-class: summarize using mean absolute across classes
-            shap_values_arr = np.mean(np.abs(shap_values_arr), axis=0)
+            if shap_values_arr.shape[2] == 2:
+                shap_values_arr = shap_values_arr[:, :, 1]
+            else:
+                shap_values_arr = np.mean(shap_values_arr, axis=2)
         plt.figure(figsize=(8, 6))
         shap.summary_plot(shap_values_arr, X, show=False)
         fig = plt.gcf()
@@ -118,7 +143,10 @@ def plot_shap_dependence(
         import matplotlib.pyplot as plt
         shap_values_arr = np.asarray(shap_values)
         if shap_values_arr.ndim == 3:
-            shap_values_arr = np.mean(shap_values_arr, axis=0)
+            if shap_values_arr.shape[2] == 2:
+                shap_values_arr = shap_values_arr[:, :, 1]
+            else:
+                shap_values_arr = np.mean(shap_values_arr, axis=2)
         plt.figure(figsize=(8, 6))
         shap.dependence_plot(feature, shap_values_arr, X, show=False)
         fig = plt.gcf()

@@ -15,6 +15,13 @@ from benchmark.models.regression import (
 )
 from benchmark.registry import REGISTRY
 
+try:
+    from benchmark.models.regression import XGBoostRegressor
+    HAS_XGBOOST = True
+except ImportError:
+    HAS_XGBOOST = False
+    XGBoostRegressor = None  # type: ignore
+
 
 class TestRegressionModelRegistry(unittest.TestCase):
     """Tests that regression models are properly registered."""
@@ -42,6 +49,12 @@ class TestRegressionModelRegistry(unittest.TestCase):
     def test_gradient_boosting_registered(self):
         self.assertTrue(REGISTRY.is_registered("gradient_boosting"))
         meta = REGISTRY.get("gradient_boosting")
+        self.assertEqual(meta["type"], "regression")
+
+    @unittest.skipUnless(HAS_XGBOOST, "xgboost not installed")
+    def test_xgboost_regressor_registered(self):
+        self.assertTrue(REGISTRY.is_registered("xgboost_regressor"))
+        meta = REGISTRY.get("xgboost_regressor")
         self.assertEqual(meta["type"], "regression")
 
 
@@ -183,6 +196,35 @@ class TestRegistryBuildRegression(unittest.TestCase):
         model = REGISTRY.build("gradient_boosting", {"n_estimators": 50})
         self.assertIsInstance(model, GradientBoostingRegressor)
         self.assertEqual(model.model.n_estimators, 50)
+
+    @unittest.skipUnless(HAS_XGBOOST, "xgboost not installed")
+    def test_build_xgboost_regressor(self):
+        model = REGISTRY.build("xgboost_regressor", {"n_estimators": 50})
+        self.assertIsInstance(model, XGBoostRegressor)
+        self.assertEqual(model.model.n_estimators, 50)
+
+
+@unittest.skipUnless(HAS_XGBOOST, "xgboost not installed")
+class TestXGBoostRegressorWrapper(unittest.TestCase):
+    """Tests for XGBoostRegressor wrapper."""
+
+    def _make_data(self):
+        X = pd.DataFrame({"a": [0, 1, 2, 3, 4, 5], "b": [5, 4, 3, 2, 1, 0]})
+        y = pd.Series([0, 1, 2, 3, 4, 5])
+        return X, y
+
+    def test_train_predict(self):
+        X, y = self._make_data()
+        model = XGBoostRegressor(n_estimators=10, random_state=42)
+        model.train(X, y)
+        preds = model.predict(X)
+        self.assertEqual(len(preds), len(X))
+
+    def test_predict_proba_returns_none(self):
+        X, y = self._make_data()
+        model = XGBoostRegressor(n_estimators=10, random_state=42)
+        model.train(X, y)
+        self.assertIsNone(model.predict_proba(X))
 
 
 if __name__ == "__main__":

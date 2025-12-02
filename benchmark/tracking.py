@@ -2,7 +2,7 @@
 
 import json
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -20,7 +20,7 @@ class ExperimentTracker:
     def _init_db(self) -> None:
         """Create the results and tuning_results tables if they do not exist."""
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.db_path, timeout=30) as conn:
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS experiment_runs (
@@ -56,7 +56,7 @@ class ExperimentTracker:
 
     def save_run(self, results: Dict[str, Any]) -> int:
         """Serialize and store an experiment run. Returns the inserted row ID."""
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = datetime.now(timezone.utc).isoformat()
         experiment_name = results.get("experiment_name", "unknown")
         dataset = json.dumps(results.get("dataset", {}))
         models = json.dumps(results.get("models", []))
@@ -65,7 +65,7 @@ class ExperimentTracker:
         notes = results.get("notes", "")
         results_json = json.dumps(results, default=str)
 
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.db_path, timeout=30) as conn:
             cursor = conn.execute(
                 """
                 INSERT INTO experiment_runs (experiment_name, timestamp, dataset, models, status, tags, notes, results_json)
@@ -81,7 +81,7 @@ class ExperimentTracker:
 
     def get_run(self, run_id: int) -> Optional[Dict[str, Any]]:
         """Retrieve a single experiment run by ID."""
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.db_path, timeout=30) as conn:
             cursor = conn.execute(
                 "SELECT * FROM experiment_runs WHERE id = ?",
                 (run_id,),
@@ -109,7 +109,7 @@ class ExperimentTracker:
         query += " ORDER BY timestamp DESC LIMIT ?"
         params.append(limit)
 
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.db_path, timeout=30) as conn:
             cursor = conn.execute(query, params)
             rows = cursor.fetchall()
 
@@ -141,7 +141,7 @@ class ExperimentTracker:
         query += " ORDER BY timestamp DESC LIMIT ?"
         params.append(limit)
 
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.db_path, timeout=30) as conn:
             cursor = conn.execute(query, params)
             rows = cursor.fetchall()
 
@@ -154,7 +154,7 @@ class ExperimentTracker:
         tuning_result: Dict[str, Any],
     ) -> int:
         """Store hyperparameter tuning results for a given run and model."""
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = datetime.now(timezone.utc).isoformat()
         method = tuning_result.get("method", "unknown")
         best_params = json.dumps(tuning_result.get("best_params", {}))
         best_score = tuning_result.get("best_score")
@@ -162,7 +162,7 @@ class ExperimentTracker:
             tuning_result.get("cv_results", {}), default=str
         )
 
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.db_path, timeout=30) as conn:
             cursor = conn.execute(
                 """
                 INSERT INTO tuning_results
@@ -179,7 +179,7 @@ class ExperimentTracker:
 
     def get_tuning_results(self, run_id: int) -> list[Dict[str, Any]]:
         """Retrieve tuning results for a given experiment run."""
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.db_path, timeout=30) as conn:
             cursor = conn.execute(
                 "SELECT * FROM tuning_results WHERE run_id = ?",
                 (run_id,),

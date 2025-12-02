@@ -2,7 +2,45 @@
 """Entry point for the ML Model Benchmark Suite."""
 
 import argparse
+import atexit
+import gc
+import signal
 import sys
+import threading
+
+# Global flag for graceful shutdown
+_shutdown_requested = threading.Event()
+
+def signal_handler(signum, frame):
+    """Handle SIGTERM/SIGINT for graceful shutdown."""
+    sig_name = 'SIGTERM' if signum == signal.SIGTERM else 'SIGINT'
+    print(f"\n[INFO] Received {sig_name} ({signum}). Shutting down gracefully...")
+    _shutdown_requested.set()
+    sys.exit(0)
+
+def cleanup_resources():
+    """Clean up GPU and system resources on exit."""
+    try:
+        gc.collect()
+        
+        # Clear CUDA cache if using PyTorch
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except ImportError:
+            pass
+        
+        print("[INFO] Cleanup complete")
+    except Exception:
+        pass
+
+# Register signal handlers
+signal.signal(signal.SIGINT, signal_handler)   # Ctrl+C
+signal.signal(signal.SIGTERM, signal_handler)  # Termination signal
+
+# Register cleanup on exit
+atexit.register(cleanup_resources)
 
 # Import models to ensure they register themselves
 import benchmark.models  # noqa: F401
@@ -218,24 +256,31 @@ def main():
             runner.config.raw["tags"] = [t.strip() for t in args.tags.split(",") if t.strip()]
         if args.notes is not None:
             runner.config.raw["notes"] = args.notes
-        results = runner.run()
-        print(f"Experiment '{results['experiment_name']}' completed.")
-        if results.get("run_id") is not None:
-            print(f"Run ID: {results['run_id']}")
-        if args.report:
-            gen = ReportGenerator()
-            sklearn_models = {
-                name: wrapper.model
-                for name, wrapper in runner.model_instances.items()
-            }
-            gen.generate(
-                results,
-                args.report,
-                X=runner.X_processed,
-                y=runner.y_processed,
-                models=sklearn_models,
-            )
-            print(f"Report saved to: {args.report}")
+        try:
+            results = runner.run()
+            print(f"Experiment '{results['experiment_name']}' completed.")
+            if results.get("run_id") is not None:
+                print(f"Run ID: {results['run_id']}")
+            if args.report:
+                gen = ReportGenerator()
+                sklearn_models = {
+                    name: wrapper.model
+                    for name, wrapper in runner.model_instances.items()
+                }
+                gen.generate(
+                    results,
+                    args.report,
+                    X=runner.X_processed,
+                    y=runner.y_processed,
+                    models=sklearn_models,
+                )
+                print(f"Report saved to: {args.report}")
+        except SystemExit:
+            print("[INFO] Benchmark interrupted by user or system.")
+            return 0
+        except Exception as e:
+            print(f"[ERROR] Benchmark failed: {e}")
+            return 1
         return 0
 
     parser.print_help()

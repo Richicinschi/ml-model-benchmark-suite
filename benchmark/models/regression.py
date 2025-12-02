@@ -8,6 +8,10 @@ from sklearn.linear_model import ElasticNet as _ElasticNet
 from sklearn.linear_model import Lasso as _Lasso
 from sklearn.linear_model import LinearRegression as _LinearRegression
 from sklearn.linear_model import Ridge as _Ridge
+try:
+    from xgboost import XGBRegressor as _XGBRegressor
+except ImportError:
+    _XGBRegressor = None  # type: ignore
 
 from ..base import ModelWrapper
 from ..registry import register_model
@@ -28,6 +32,24 @@ class LinearRegression(ModelWrapper):
 
     def predict_proba(self, X: pd.DataFrame) -> Optional[Any]:
         return None
+
+
+if _XGBRegressor is not None:
+    @register_model("xgboost_regressor", "regression", default_params={"n_estimators": 100, "max_depth": 3})
+    class XGBoostRegressor(ModelWrapper):
+        """XGBoost regressor wrapper."""
+
+        def __init__(self, **kwargs: Any):
+            super().__init__("xgboost_regressor", _XGBRegressor(**kwargs), hyperparams=kwargs)
+
+        def train(self, X: pd.DataFrame, y: pd.Series) -> None:
+            self.model.fit(X, y)
+
+        def predict(self, X: pd.DataFrame) -> Any:
+            return self.model.predict(X)
+
+        def predict_proba(self, X: pd.DataFrame) -> Optional[Any]:
+            return None
 
 
 @register_model("ridge", "regression", default_params={"alpha": 1.0})

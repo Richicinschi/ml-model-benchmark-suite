@@ -1,0 +1,24 @@
+experiment_name: airline_delay_2015_september_noscale
+
+dataset:
+  source: csv
+  path: datasets/airline-delay-and-cancellation-data/2015_september.csv
+  target_column: CANCELLED
+
+models:
+  lightgbm_classifier: {}
+
+preprocessing:
+  imputation: median
+  encoding: one_hot
+
+cv:
+  strategy: stratified_kfold
+  folds: 3
+
+tags:
+  - airline
+  - "2015"
+  - september
+  - classification
+  - noscale

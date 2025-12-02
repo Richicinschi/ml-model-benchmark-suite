@@ -1,5 +1,6 @@
 """Model implementations for classification and regression."""
 
+from . import lightgbm_wrapper  # noqa: F401
 from .classification import (
     LogisticRegression,
     KNeighborsClassifier,
@@ -30,6 +31,8 @@ __all__ = [
     "Lasso",
     "ElasticNet",
     "GradientBoostingRegressor",
+    "LightGBMClassifier",
+    "LightGBMRegressor",
 ]
 
 if XGBoostClassifier is not None:
